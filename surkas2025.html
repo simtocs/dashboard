@@ -67,6 +67,10 @@
                     <option value="4">TW4 (Q4)</option>
                 </select>
             </div>
+            <button class="compare-btn" onclick="openComparisonModal()">
+                <span>📊</span>
+                <span>Bandingkan Toko</span>
+            </button>
             <button class="refresh-btn" onclick="handleRefresh()">
                 <span>🔄</span>
                 <span>Refresh</span>
@@ -173,6 +177,55 @@
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="js/surkas2025.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Chart Visualization Modal -->
+<div id="chartModal" class="modal">
+    <div class="modal-content chart-modal-content">
+        <div class="modal-header">
+            <h2 id="chartModalTitle">📊 Visualisasi Data</h2>
+            <button class="close-modal" onclick="closeChartModal()">&times;</button>
+        </div>
+        <div class="chart-controls">
+            <select id="chartTypeSelect" onchange="updateChart()">
+                <option value="bar">Bar Chart</option>
+                <option value="line">Line Chart</option>
+                <option value="pie">Pie Chart (Total per Triwulan)</option>
+            </select>
+            <select id="chartDataSelect" onchange="updateChart()">
+                <option value="ebitdaLR">EBITDA LR</option>
+                <option value="labaNetDitransfer">Laba Net Ditransfer</option>
+                <option value="bayarListrik">Bayar Listrik</option>
+                <option value="sisaSurkas">Sisa Surplus Kas</option>
+            </select>
+        </div>
+        <div class="chart-container-wrapper">
+            <canvas id="mainChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Store Comparison Modal -->
+<div id="comparisonModal" class="modal">
+    <div class="modal-content comparison-modal-content">
+        <div class="modal-header">
+            <h2>📊 Bandingkan Toko</h2>
+            <button class="close-modal" onclick="closeComparisonModal()">&times;</button>
+        </div>
+        <div class="comparison-controls">
+            <div class="store-selector">
+                <h3>Pilih Toko untuk Dibandingkan:</h3>
+                <div id="storeCheckboxes" class="store-checkboxes"></div>
+            </div>
+            <button class="btn-compare" onclick="performComparison()">
+                <span>🔍</span>
+                <span>Bandingkan</span>
+            </button>
+        </div>
+        <div id="comparisonResults" class="comparison-results"></div>
+    </div>
+</div>
 </body>
 </html>
+
 
