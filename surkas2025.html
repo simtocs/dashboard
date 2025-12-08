@@ -213,6 +213,18 @@
             <button class="close-modal" onclick="closeComparisonModal()">&times;</button>
         </div>
         <div class="comparison-controls">
+            <div class="comparison-filters">
+                <div class="filter-group">
+                    <label for="comparisonTriwulanFilter">Filter Triwulan:</label>
+                    <select id="comparisonTriwulanFilter">
+                        <option value="all">Semua Triwulan</option>
+                        <option value="1">Triwulan 1 (Q1)</option>
+                        <option value="2">Triwulan 2 (Q2)</option>
+                        <option value="3">Triwulan 3 (Q3)</option>
+                        <option value="4">Triwulan 4 (Q4)</option>
+                    </select>
+                </div>
+            </div>
             <div class="store-selector">
                 <h3>Pilih Toko untuk Dibandingkan:</h3>
                 <div id="storeCheckboxes" class="store-checkboxes"></div>
@@ -227,5 +239,6 @@
 </div>
 </body>
 </html>
+
 
 
