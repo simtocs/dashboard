@@ -1736,6 +1736,7 @@ async function performComparison() {
     }
     
     const selectedStores = Array.from(checkboxes).map(cb => cb.value);
+    const selectedTriwulan = document.getElementById('comparisonTriwulanFilter').value;
     
     const resultsContainer = document.getElementById('comparisonResults');
     resultsContainer.innerHTML = '<div class="loading"><div class="loading-spinner"></div><div class="loading-text">Memuat data perbandingan...</div></div>';
@@ -1754,8 +1755,21 @@ async function performComparison() {
             const table1Data = data1.values || [];
             const table2Data = data2.values || [];
             
-            const dataRows1 = table1Data.slice(1).filter(row => row[1]);
-            const dataRows2 = table2Data.slice(1).filter(row => row[0]);
+            let dataRows1 = table1Data.slice(1).filter(row => row[1]);
+            let dataRows2 = table2Data.slice(1).filter(row => row[0]);
+            
+            // Apply triwulan filter if not "all"
+            if (selectedTriwulan !== 'all') {
+                dataRows1 = dataRows1.filter(row => {
+                    const triwulan = row[0] ? row[0].toString().trim() : '';
+                    return triwulan === selectedTriwulan;
+                });
+                
+                dataRows2 = dataRows2.filter(row => {
+                    const triwulan = row[0] ? row[0].toString().trim() : '';
+                    return triwulan === selectedTriwulan;
+                });
+            }
             
             const totals1 = calculateTotals(dataRows1);
             const totals2 = calculateTotalsTable2(dataRows2);
@@ -1765,13 +1779,14 @@ async function performComparison() {
                 totals1,
                 totals2,
                 dataRows1,
-                dataRows2
+                dataRows2,
+                triwulanFilter: selectedTriwulan
             };
         });
         
         const allStoreData = await Promise.all(storeDataPromises);
         
-        displayComparisonResults(allStoreData);
+        displayComparisonResults(allStoreData, selectedTriwulan);
         
     } catch (error) {
         console.error('Error loading comparison data:', error);
@@ -1779,9 +1794,16 @@ async function performComparison() {
     }
 }
 
-function displayComparisonResults(storeData) {
+function displayComparisonResults(storeData, selectedTriwulan) {
+    const triwulanLabel = selectedTriwulan === 'all' ? 'Semua Triwulan' : getTriwulanLabel(selectedTriwulan);
+    
     let html = `
-        <h3 style="color: #FF69B4; margin-bottom: 20px;">📊 Hasil Perbandingan - Tahun ${appState.currentYear}</h3>
+        <div class="comparison-header">
+            <h3 style="color: #FF69B4; margin-bottom: 10px;">📊 Hasil Perbandingan - Tahun ${appState.currentYear}</h3>
+            <div class="filter-badge" style="display: inline-block; margin-bottom: 20px;">
+                Filter: ${triwulanLabel}
+            </div>
+        </div>
         
         <!-- Comparison Table -->
         <div class="comparison-table">
@@ -1794,28 +1816,81 @@ function displayComparisonResults(storeData) {
                         <th>TOTAL BAYAR LISTRIK</th>
                         <th>TOTAL SISA SURKAS</th>
                         <th>TOTAL PENGGUNAAN SURKAS</th>
+                        <th>JUMLAH BULAN</th>
                     </tr>
                 </thead>
                 <tbody>
     `;
     
-    storeData.forEach(store => {
+    // Sort stores by Sisa Surkas (highest to lowest)
+    const sortedStoreData = [...storeData].sort((a, b) => b.totals1.sisaSurkas - a.totals1.sisaSurkas);
+    
+    sortedStoreData.forEach((store, index) => {
         const colorClass = store.totals1.sisaSurkas > 0 ? 'positive' : store.totals1.sisaSurkas < 0 ? 'negative' : 'zero';
+        const rankBadge = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+        
         html += `
             <tr>
-                <td style="font-weight: 600;">${store.storeName}</td>
+                <td style="font-weight: 600;">${rankBadge} ${store.storeName}</td>
                 <td class="currency">${formatRupiah(store.totals1.ebitdaLR)}</td>
                 <td class="currency">${formatRupiah(store.totals1.labaNetDitransfer)}</td>
                 <td class="currency">${formatRupiah(store.totals1.bayarListrik)}</td>
                 <td class="currency ${colorClass}">${formatRupiah(store.totals1.sisaSurkas)}</td>
                 <td class="currency">${formatRupiah(store.totals2.nominalPenggunaanSurkas)}</td>
+                <td class="center">${store.dataRows1.length}</td>
             </tr>
         `;
     });
     
+    // Calculate Grand Totals
+    const grandTotals = storeData.reduce((acc, store) => ({
+        ebitdaLR: acc.ebitdaLR + store.totals1.ebitdaLR,
+        labaNetDitransfer: acc.labaNetDitransfer + store.totals1.labaNetDitransfer,
+        bayarListrik: acc.bayarListrik + store.totals1.bayarListrik,
+        sisaSurkas: acc.sisaSurkas + store.totals1.sisaSurkas,
+        penggunaanSurkas: acc.penggunaanSurkas + store.totals2.nominalPenggunaanSurkas
+    }), {
+        ebitdaLR: 0,
+        labaNetDitransfer: 0,
+        bayarListrik: 0,
+        sisaSurkas: 0,
+        penggunaanSurkas: 0
+    });
+    
+    const grandColorClass = grandTotals.sisaSurkas > 0 ? 'positive' : grandTotals.sisaSurkas < 0 ? 'negative' : 'zero';
+    
     html += `
+                <tr style="background: #f8f9fa; font-weight: 700; border-top: 3px solid #FF69B4;">
+                    <td style="font-weight: 700;">TOTAL KESELURUHAN</td>
+                    <td class="currency">${formatRupiah(grandTotals.ebitdaLR)}</td>
+                    <td class="currency">${formatRupiah(grandTotals.labaNetDitransfer)}</td>
+                    <td class="currency">${formatRupiah(grandTotals.bayarListrik)}</td>
+                    <td class="currency ${grandColorClass}">${formatRupiah(grandTotals.sisaSurkas)}</td>
+                    <td class="currency">${formatRupiah(grandTotals.penggunaanSurkas)}</td>
+                    <td class="center">-</td>
+                </tr>
                 </tbody>
             </table>
+        </div>
+        
+        <!-- Summary Stats -->
+        <div class="comparison-summary-stats">
+            <div class="comparison-stat-card">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-label">Toko Terbaik (Sisa Surkas)</div>
+                <div class="stat-value">${sortedStoreData[0].storeName}</div>
+                <div class="stat-amount ${sortedStoreData[0].totals1.sisaSurkas > 0 ? 'positive' : 'negative'}">${formatRupiah(sortedStoreData[0].totals1.sisaSurkas)}</div>
+            </div>
+            <div class="comparison-stat-card">
+                <div class="stat-icon">📈</div>
+                <div class="stat-label">Rata-rata Sisa Surkas</div>
+                <div class="stat-value">${formatRupiah(grandTotals.sisaSurkas / storeData.length)}</div>
+            </div>
+            <div class="comparison-stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-label">Total EBITDA Semua Toko</div>
+                <div class="stat-value">${formatRupiah(grandTotals.ebitdaLR)}</div>
+            </div>
         </div>
         
         <!-- Comparison Charts -->
@@ -1825,7 +1900,7 @@ function displayComparisonResults(storeData) {
     // Chart 1: EBITDA LR Comparison
     html += `
         <div class="comparison-chart-item">
-            <h3>Total EBITDA LR</h3>
+            <h3>Perbandingan EBITDA LR</h3>
             <div class="comparison-chart-wrapper">
                 <canvas id="compChart1"></canvas>
             </div>
@@ -1835,19 +1910,29 @@ function displayComparisonResults(storeData) {
     // Chart 2: Sisa Surplus Kas Comparison
     html += `
         <div class="comparison-chart-item">
-            <h3>Total Sisa Surplus Kas</h3>
+            <h3>Perbandingan Sisa Surplus Kas</h3>
             <div class="comparison-chart-wrapper">
                 <canvas id="compChart2"></canvas>
             </div>
         </div>
     `;
     
-    // Chart 3: Penggunaan Surkas Comparison
+    // Chart 3: Laba Net vs Bayar Listrik Comparison
     html += `
         <div class="comparison-chart-item">
-            <h3>Total Penggunaan Surkas</h3>
+            <h3>Laba Net vs Bayar Listrik</h3>
             <div class="comparison-chart-wrapper">
                 <canvas id="compChart3"></canvas>
+            </div>
+        </div>
+    `;
+    
+    // Chart 4: Penggunaan Surkas Comparison
+    html += `
+        <div class="comparison-chart-item">
+            <h3>Perbandingan Penggunaan Surkas</h3>
+            <div class="comparison-chart-wrapper">
+                <canvas id="compChart4"></canvas>
             </div>
         </div>
     `;
@@ -1864,6 +1949,7 @@ function displayComparisonResults(storeData) {
 
 function createComparisonCharts(storeData) {
     const storeNames = storeData.map(s => s.storeName);
+    const colors = ['#FF69B4', '#4A90E2', '#FFA500', '#28a745', '#9C27B0', '#E91E63', '#00BCD4', '#FFEB3B'];
     
     // Chart 1: EBITDA LR
     new Chart(document.getElementById('compChart1'), {
@@ -1873,7 +1959,9 @@ function createComparisonCharts(storeData) {
             datasets: [{
                 label: 'EBITDA LR',
                 data: storeData.map(s => s.totals1.ebitdaLR),
-                backgroundColor: '#FF69B4'
+                backgroundColor: colors.slice(0, storeData.length),
+                borderWidth: 2,
+                borderColor: '#fff'
             }]
         },
         options: {
@@ -1906,7 +1994,9 @@ function createComparisonCharts(storeData) {
             datasets: [{
                 label: 'Sisa Surplus Kas',
                 data: storeData.map(s => s.totals1.sisaSurkas),
-                backgroundColor: storeData.map(s => s.totals1.sisaSurkas > 0 ? '#28a745' : '#dc3545')
+                backgroundColor: storeData.map(s => s.totals1.sisaSurkas > 0 ? '#28a745' : '#dc3545'),
+                borderWidth: 2,
+                borderColor: '#fff'
             }]
         },
         options: {
@@ -1930,25 +2020,34 @@ function createComparisonCharts(storeData) {
         }
     });
     
-    // Chart 3: Penggunaan Surkas
+    // Chart 3: Laba Net vs Bayar Listrik (Grouped Bar)
     new Chart(document.getElementById('compChart3'), {
         type: 'bar',
         data: {
             labels: storeNames,
-            datasets: [{
-                label: 'Penggunaan Surkas',
-                data: storeData.map(s => s.totals2.nominalPenggunaanSurkas),
-                backgroundColor: '#4A90E2'
-            }]
+            datasets: [
+                {
+                    label: 'Laba Net Ditransfer',
+                    data: storeData.map(s => s.totals1.labaNetDitransfer),
+                    backgroundColor: '#4A90E2',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Bayar Listrik',
+                    data: storeData.map(s => s.totals1.bayarListrik),
+                    backgroundColor: '#FFA500',
+                    borderWidth: 1
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
+                legend: { display: true, position: 'top' },
                 tooltip: {
                     callbacks: {
-                        label: (context) => formatRupiah(context.parsed.y)
+                        label: (context) => context.dataset.label + ': ' + formatRupiah(context.parsed.y)
                     }
                 }
             },
@@ -1957,6 +2056,33 @@ function createComparisonCharts(storeData) {
                     beginAtZero: true,
                     ticks: {
                         callback: (value) => formatRupiah(value)
+                    }
+                }
+            }
+        }
+    });
+    
+    // Chart 4: Penggunaan Surkas
+    new Chart(document.getElementById('compChart4'), {
+        type: 'doughnut',
+        data: {
+            labels: storeNames,
+            datasets: [{
+                label: 'Penggunaan Surkas',
+                data: storeData.map(s => s.totals2.nominalPenggunaanSurkas),
+                backgroundColor: colors.slice(0, storeData.length),
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'right' },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => context.label + ': ' + formatRupiah(context.parsed)
                     }
                 }
             }
@@ -1980,4 +2106,5 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
 
