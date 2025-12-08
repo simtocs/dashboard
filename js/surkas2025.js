@@ -674,20 +674,24 @@ function displayData(values1, values2, sheetName) {
     ${filterBadge}
     
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-        <h2 style="color: #FF69B4; margin: 0; font-size: 1.5em;">💰 Surplus Kas Toko - Tahun ${appState.currentYear}</h2>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="print-btn" onclick="generatePrintReport()" style="display: inline-flex;">
-                <span>🖨️</span>
-                <span>Cetak Laporan</span>
-            </button>
-            ${accessToken ? `
-            <button class="add-btn" onclick="openAddModal(1)" style="display: inline-flex;">
-                <span>➕</span>
-                <span>Tambah Data Surplus Kas</span>
-            </button>
-            ` : ''}
-        </div>
+    <h2 style="color: #FF69B4; margin: 0; font-size: 1.5em;">💰 Surplus Kas Toko - Tahun ${appState.currentYear}</h2>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="visualize-btn" onclick="openVisualizationModal()">
+            <span>📈</span>
+            <span>Visualisasi Data</span>
+        </button>
+        <button class="print-btn" onclick="generatePrintReport()">
+            <span>🖨️</span>
+            <span>Cetak Laporan</span>
+        </button>
+        ${accessToken ? `
+        <button class="add-btn" onclick="openAddModal(1)">
+            <span>➕</span>
+            <span>Tambah Data Surplus Kas</span>
+        </button>
+        ` : ''}
     </div>
+</div>
     
     <div class="stats">
         <div class="stat-card">
@@ -1575,4 +1579,405 @@ window.onclick = function(event) {
     }
 }
 
+// ============ CHART VISUALIZATION ============
+let currentChart = null;
+
+function openVisualizationModal() {
+    if (!appState.currentSheet || !appState.currentData || appState.currentData.length < 2) {
+        alert('⚠️ Tidak ada data untuk divisualisasikan!');
+        return;
+    }
+    
+    document.getElementById('chartModal').classList.add('active');
+    document.getElementById('chartModalTitle').textContent = `📊 Visualisasi Data - ${appState.currentSheet}`;
+    
+    setTimeout(() => {
+        updateChart();
+    }, 300);
+}
+
+function closeChartModal() {
+    document.getElementById('chartModal').classList.remove('active');
+    if (currentChart) {
+        currentChart.destroy();
+        currentChart = null;
+    }
+}
+
+function updateChart() {
+    const chartType = document.getElementById('chartTypeSelect').value;
+    const dataType = document.getElementById('chartDataSelect').value;
+    
+    const allDataRows = appState.currentData.slice(1).filter(row => row[1]);
+    const dataRows = filterDataByTriwulan(allDataRows);
+    
+    if (dataRows.length === 0) {
+        alert('Tidak ada data untuk filter yang dipilih');
+        return;
+    }
+    
+    const labels = dataRows.map(row => row[1]); // Bulan
+    let data, label, backgroundColor;
+    
+    const dataMap = {
+        'ebitdaLR': { index: 2, label: 'EBITDA LR', color: '#FF69B4' },
+        'labaNetDitransfer': { index: 4, label: 'Laba Net Ditransfer', color: '#4A90E2' },
+        'bayarListrik': { index: 5, label: 'Bayar Listrik', color: '#FFA500' },
+        'sisaSurkas': { index: 6, label: 'Sisa Surplus Kas', color: '#28a745' }
+    };
+    
+    const selectedData = dataMap[dataType];
+    data = dataRows.map(row => parseNumber(row[selectedData.index]));
+    label = selectedData.label;
+    
+    if (chartType === 'pie') {
+        // Group by Triwulan for pie chart
+        const triwulanData = {};
+        dataRows.forEach(row => {
+            const tw = row[0] || 'Unknown';
+            const value = parseNumber(row[selectedData.index]);
+            triwulanData[tw] = (triwulanData[tw] || 0) + value;
+        });
+        
+        labels.length = 0;
+        data.length = 0;
+        Object.keys(triwulanData).forEach(tw => {
+            labels.push(`Triwulan ${tw}`);
+            data.push(triwulanData[tw]);
+        });
+        
+        backgroundColor = ['#FF69B4', '#4A90E2', '#FFA500', '#28a745', '#9C27B0'];
+    } else {
+        backgroundColor = selectedData.color;
+    }
+    
+    const ctx = document.getElementById('mainChart');
+    
+    if (currentChart) {
+        currentChart.destroy();
+    }
+    
+    currentChart = new Chart(ctx, {
+        type: chartType,
+        data: {
+            labels: labels,
+            datasets: [{
+                label: label,
+                data: data,
+                backgroundColor: backgroundColor,
+                borderColor: chartType === 'line' ? backgroundColor : undefined,
+                borderWidth: chartType === 'line' ? 3 : 1,
+                fill: chartType === 'line' ? false : true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + formatRupiah(context.parsed.y || context.parsed);
+                        }
+                    }
+                }
+            },
+            scales: chartType !== 'pie' ? {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatRupiah(value);
+                        }
+                    }
+                }
+            } : {}
+        }
+    });
+}
+
+// ============ STORE COMPARISON ============
+function openComparisonModal() {
+    if (appState.sheets.length === 0) {
+        alert('⚠️ Tidak ada toko yang tersedia!');
+        return;
+    }
+    
+    const checkboxesContainer = document.getElementById('storeCheckboxes');
+    checkboxesContainer.innerHTML = '';
+    
+    appState.sheets.forEach((sheet, index) => {
+        const div = document.createElement('div');
+        div.className = 'store-checkbox-item';
+        div.innerHTML = `
+            <input type="checkbox" id="store_${index}" value="${sheet}" ${sheet === appState.currentSheet ? 'checked' : ''}>
+            <label for="store_${index}">${sheet}</label>
+        `;
+        checkboxesContainer.appendChild(div);
+    });
+    
+    document.getElementById('comparisonModal').classList.add('active');
+}
+
+function closeComparisonModal() {
+    document.getElementById('comparisonModal').classList.remove('active');
+}
+
+async function performComparison() {
+    const checkboxes = document.querySelectorAll('#storeCheckboxes input[type="checkbox"]:checked');
+    
+    if (checkboxes.length < 2) {
+        alert('⚠️ Pilih minimal 2 toko untuk dibandingkan!');
+        return;
+    }
+    
+    const selectedStores = Array.from(checkboxes).map(cb => cb.value);
+    
+    const resultsContainer = document.getElementById('comparisonResults');
+    resultsContainer.innerHTML = '<div class="loading"><div class="loading-spinner"></div><div class="loading-text">Memuat data perbandingan...</div></div>';
+    
+    try {
+        const storeDataPromises = selectedStores.map(async (storeName) => {
+            const ranges = CONFIG.YEAR_RANGES[appState.currentYear];
+            const [response1, response2] = await Promise.all([
+                fetch(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(storeName)}!${ranges.table1}?key=${CONFIG.API_KEY}`),
+                fetch(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(storeName)}!${ranges.table2}?key=${CONFIG.API_KEY}`)
+            ]);
+            
+            const data1 = await response1.json();
+            const data2 = await response2.json();
+            
+            const table1Data = data1.values || [];
+            const table2Data = data2.values || [];
+            
+            const dataRows1 = table1Data.slice(1).filter(row => row[1]);
+            const dataRows2 = table2Data.slice(1).filter(row => row[0]);
+            
+            const totals1 = calculateTotals(dataRows1);
+            const totals2 = calculateTotalsTable2(dataRows2);
+            
+            return {
+                storeName,
+                totals1,
+                totals2,
+                dataRows1,
+                dataRows2
+            };
+        });
+        
+        const allStoreData = await Promise.all(storeDataPromises);
+        
+        displayComparisonResults(allStoreData);
+        
+    } catch (error) {
+        console.error('Error loading comparison data:', error);
+        resultsContainer.innerHTML = `<div class="error"><strong>❌ Gagal memuat data perbandingan</strong>${error.message}</div>`;
+    }
+}
+
+function displayComparisonResults(storeData) {
+    let html = `
+        <h3 style="color: #FF69B4; margin-bottom: 20px;">📊 Hasil Perbandingan - Tahun ${appState.currentYear}</h3>
+        
+        <!-- Comparison Table -->
+        <div class="comparison-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>TOKO</th>
+                        <th>TOTAL EBITDA LR</th>
+                        <th>TOTAL LABA NET</th>
+                        <th>TOTAL BAYAR LISTRIK</th>
+                        <th>TOTAL SISA SURKAS</th>
+                        <th>TOTAL PENGGUNAAN SURKAS</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    storeData.forEach(store => {
+        const colorClass = store.totals1.sisaSurkas > 0 ? 'positive' : store.totals1.sisaSurkas < 0 ? 'negative' : 'zero';
+        html += `
+            <tr>
+                <td style="font-weight: 600;">${store.storeName}</td>
+                <td class="currency">${formatRupiah(store.totals1.ebitdaLR)}</td>
+                <td class="currency">${formatRupiah(store.totals1.labaNetDitransfer)}</td>
+                <td class="currency">${formatRupiah(store.totals1.bayarListrik)}</td>
+                <td class="currency ${colorClass}">${formatRupiah(store.totals1.sisaSurkas)}</td>
+                <td class="currency">${formatRupiah(store.totals2.nominalPenggunaanSurkas)}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Comparison Charts -->
+        <div class="comparison-chart-grid">
+    `;
+    
+    // Chart 1: EBITDA LR Comparison
+    html += `
+        <div class="comparison-chart-item">
+            <h3>Total EBITDA LR</h3>
+            <div class="comparison-chart-wrapper">
+                <canvas id="compChart1"></canvas>
+            </div>
+        </div>
+    `;
+    
+    // Chart 2: Sisa Surplus Kas Comparison
+    html += `
+        <div class="comparison-chart-item">
+            <h3>Total Sisa Surplus Kas</h3>
+            <div class="comparison-chart-wrapper">
+                <canvas id="compChart2"></canvas>
+            </div>
+        </div>
+    `;
+    
+    // Chart 3: Penggunaan Surkas Comparison
+    html += `
+        <div class="comparison-chart-item">
+            <h3>Total Penggunaan Surkas</h3>
+            <div class="comparison-chart-wrapper">
+                <canvas id="compChart3"></canvas>
+            </div>
+        </div>
+    `;
+    
+    html += `</div>`;
+    
+    document.getElementById('comparisonResults').innerHTML = html;
+    
+    // Create charts after DOM is updated
+    setTimeout(() => {
+        createComparisonCharts(storeData);
+    }, 100);
+}
+
+function createComparisonCharts(storeData) {
+    const storeNames = storeData.map(s => s.storeName);
+    
+    // Chart 1: EBITDA LR
+    new Chart(document.getElementById('compChart1'), {
+        type: 'bar',
+        data: {
+            labels: storeNames,
+            datasets: [{
+                label: 'EBITDA LR',
+                data: storeData.map(s => s.totals1.ebitdaLR),
+                backgroundColor: '#FF69B4'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => formatRupiah(context.parsed.y)
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (value) => formatRupiah(value)
+                    }
+                }
+            }
+        }
+    });
+    
+    // Chart 2: Sisa Surplus Kas
+    new Chart(document.getElementById('compChart2'), {
+        type: 'bar',
+        data: {
+            labels: storeNames,
+            datasets: [{
+                label: 'Sisa Surplus Kas',
+                data: storeData.map(s => s.totals1.sisaSurkas),
+                backgroundColor: storeData.map(s => s.totals1.sisaSurkas > 0 ? '#28a745' : '#dc3545')
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => formatRupiah(context.parsed.y)
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        callback: (value) => formatRupiah(value)
+                    }
+                }
+            }
+        }
+    });
+    
+    // Chart 3: Penggunaan Surkas
+    new Chart(document.getElementById('compChart3'), {
+        type: 'bar',
+        data: {
+            labels: storeNames,
+            datasets: [{
+                label: 'Penggunaan Surkas',
+                data: storeData.map(s => s.totals2.nominalPenggunaanSurkas),
+                backgroundColor: '#4A90E2'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => formatRupiah(context.parsed.y)
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (value) => formatRupiah(value)
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Add click handler for closing modals
+window.onclick = function(event) {
+    const dataModal = document.getElementById('dataModal');
+    const chartModal = document.getElementById('chartModal');
+    const comparisonModal = document.getElementById('comparisonModal');
+    
+    if (event.target === dataModal) {
+        closeModal();
+    }
+    if (event.target === chartModal) {
+        closeChartModal();
+    }
+    if (event.target === comparisonModal) {
+        closeComparisonModal();
+    }
+}
 
