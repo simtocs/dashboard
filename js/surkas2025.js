@@ -1,4 +1,4 @@
- // ============ CONFIG ============
+  // ============ CONFIG ============
 const CONFIG = {
     CLIENT_ID: '874016971039-g91m2mt64mid7sh9vkk14vpjmpbc095o.apps.googleusercontent.com',
     API_KEY: 'AIzaSyCMpk-2HdASd6oX-MBRqehgXX-kTfzpFw0',
@@ -1271,6 +1271,12 @@ function generatePrintReport() {
             color: #6c757d;
         }
         
+        .data-table tr.grand-total {
+            background: #f8f9fa;
+            font-weight: bold;
+            border-top: 3px solid #FF69B4;
+        }
+        
         .footer-section {
             margin-top: 30px;
             padding-top: 20px;
@@ -1308,6 +1314,60 @@ function generatePrintReport() {
             margin-top: 20px;
         }
         
+        .page-break {
+            page-break-before: always;
+        }
+        
+        .comparison-section {
+            margin-top: 30px;
+        }
+        
+        .comparison-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-summary-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #9C27B0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .comparison-summary-card .icon {
+            font-size: 24pt;
+            margin-bottom: 8px;
+        }
+        
+        .comparison-summary-card .label {
+            font-size: 8pt;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .comparison-summary-card .value {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .comparison-summary-card .amount {
+            font-size: 10pt;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .comparison-summary-card .amount.positive {
+            color: #28a745;
+        }
+        
+        .comparison-summary-card .amount.negative {
+            color: #dc3545;
+        }
+        
         @media print {
             body {
                 print-color-adjust: exact;
@@ -1316,10 +1376,6 @@ function generatePrintReport() {
             
             .no-print {
                 display: none !important;
-            }
-            
-            .page-break {
-                page-break-before: always;
             }
         }
     </style>
@@ -1443,6 +1499,13 @@ function generatePrintReport() {
 `;
     }
 
+    // Check if there's comparison data stored
+    const comparisonData = sessionStorage.getItem('lastComparisonData');
+    if (comparisonData) {
+        const parsed = JSON.parse(comparisonData);
+        printHTML += generateComparisonPrintSection(parsed.storeData, parsed.triwulanFilter);
+    }
+
     // Footer with signatures
     printHTML += `
     <div class="footer-section">
@@ -1476,6 +1539,135 @@ function generatePrintReport() {
     } else {
         alert('❌ Tidak dapat membuka window print. Pastikan popup tidak diblokir.');
     }
+}
+
+// ============ GENERATE COMPARISON PRINT SECTION ============
+function generateComparisonPrintSection(storeData, triwulanFilter) {
+    const triwulanLabel = triwulanFilter === 'all' ? 'Semua Triwulan' : getTriwulanLabel(triwulanFilter);
+    
+    // Sort stores by Sisa Surkas
+    const sortedStoreData = [...storeData].sort((a, b) => b.totals1.sisaSurkas - a.totals1.sisaSurkas);
+    
+    // Calculate grand totals
+    const grandTotals = storeData.reduce((acc, store) => ({
+        ebitdaLR: acc.ebitdaLR + store.totals1.ebitdaLR,
+        labaNetDitransfer: acc.labaNetDitransfer + store.totals1.labaNetDitransfer,
+        bayarListrik: acc.bayarListrik + store.totals1.bayarListrik,
+        sisaSurkas: acc.sisaSurkas + store.totals1.sisaSurkas,
+        penggunaanSurkas: acc.penggunaanSurkas + store.totals2.nominalPenggunaanSurkas
+    }), {
+        ebitdaLR: 0,
+        labaNetDitransfer: 0,
+        bayarListrik: 0,
+        sisaSurkas: 0,
+        penggunaanSurkas: 0
+    });
+    
+    const grandColorClass = grandTotals.sisaSurkas > 0 ? 'positive' : grandTotals.sisaSurkas < 0 ? 'negative' : 'zero';
+    
+    let html = `
+    <div class="comparison-section page-break">
+        <div class="section-title">📊 PERBANDINGAN ANTAR TOKO - TAHUN ${appState.currentYear}</div>
+        <div style="text-align: center; margin-bottom: 15px;">
+            <span style="display: inline-block; background: #f0f0f0; padding: 5px 15px; border-radius: 15px; font-size: 9pt; font-weight: bold; color: #9C27B0;">
+                Filter: ${triwulanLabel}
+            </span>
+        </div>
+        
+        <!-- Summary Stats -->
+        <div class="comparison-summary-grid">
+            <div class="comparison-summary-card">
+                <div class="icon">🏆</div>
+                <div class="label">Toko Terbaik (Sisa Surkas)</div>
+                <div class="value">${sortedStoreData[0].storeName}</div>
+                <div class="amount ${sortedStoreData[0].totals1.sisaSurkas > 0 ? 'positive' : 'negative'}">
+                    ${formatRupiah(sortedStoreData[0].totals1.sisaSurkas)}
+                </div>
+            </div>
+            <div class="comparison-summary-card">
+                <div class="icon">📈</div>
+                <div class="label">Rata-rata Sisa Surkas</div>
+                <div class="value">${formatRupiah(grandTotals.sisaSurkas / storeData.length)}</div>
+            </div>
+            <div class="comparison-summary-card">
+                <div class="icon">💰</div>
+                <div class="label">Total EBITDA Semua Toko</div>
+                <div class="value">${formatRupiah(grandTotals.ebitdaLR)}</div>
+            </div>
+        </div>
+        
+        <!-- Comparison Table -->
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">TOKO</th>
+                    <th style="width: 14%;">TOTAL EBITDA LR</th>
+                    <th style="width: 14%;">TOTAL LABA NET</th>
+                    <th style="width: 14%;">TOTAL BAYAR LISTRIK</th>
+                    <th style="width: 14%;">TOTAL SISA SURKAS</th>
+                    <th style="width: 14%;">TOTAL PENGGUNAAN SURKAS</th>
+                    <th style="width: 15%;">JUMLAH BULAN</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    sortedStoreData.forEach((store, index) => {
+        const colorClass = store.totals1.sisaSurkas > 0 ? 'positive' : store.totals1.sisaSurkas < 0 ? 'negative' : 'zero';
+        const rankBadge = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+        
+        html += `
+            <tr>
+                <td style="font-weight: 600;">${rankBadge} ${store.storeName}</td>
+                <td class="right">${formatRupiah(store.totals1.ebitdaLR)}</td>
+                <td class="right">${formatRupiah(store.totals1.labaNetDitransfer)}</td>
+                <td class="right">${formatRupiah(store.totals1.bayarListrik)}</td>
+                <td class="right ${colorClass}">${formatRupiah(store.totals1.sisaSurkas)}</td>
+                <td class="right">${formatRupiah(store.totals2.nominalPenggunaanSurkas)}</td>
+                <td class="center">${store.dataRows1.length}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                <tr class="grand-total">
+                    <td style="font-weight: 700;">TOTAL KESELURUHAN</td>
+                    <td class="right">${formatRupiah(grandTotals.ebitdaLR)}</td>
+                    <td class="right">${formatRupiah(grandTotals.labaNetDitransfer)}</td>
+                    <td class="right">${formatRupiah(grandTotals.bayarListrik)}</td>
+                    <td class="right ${grandColorClass}">${formatRupiah(grandTotals.sisaSurkas)}</td>
+                    <td class="right">${formatRupiah(grandTotals.penggunaanSurkas)}</td>
+                    <td class="center">-</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <!-- Performance Analysis -->
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+            <h4 style="color: #FF69B4; margin-bottom: 10px;">📊 Analisis Performa</h4>
+            <table style="width: 100%; font-size: 9pt;">
+                <tr>
+                    <td style="padding: 5px; width: 40%;"><strong>Toko dengan EBITDA Tertinggi:</strong></td>
+                    <td style="padding: 5px;">${[...storeData].sort((a, b) => b.totals1.ebitdaLR - a.totals1.ebitdaLR)[0].storeName} (${formatRupiah([...storeData].sort((a, b) => b.totals1.ebitdaLR - a.totals1.ebitdaLR)[0].totals1.ebitdaLR)})</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px;"><strong>Toko dengan Bayar Listrik Terendah:</strong></td>
+                    <td style="padding: 5px;">${[...storeData].sort((a, b) => a.totals1.bayarListrik - b.totals1.bayarListrik)[0].storeName} (${formatRupiah([...storeData].sort((a, b) => a.totals1.bayarListrik - b.totals1.bayarListrik)[0].totals1.bayarListrik)})</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px;"><strong>Toko dengan Penggunaan Surkas Tertinggi:</strong></td>
+                    <td style="padding: 5px;">${[...storeData].sort((a, b) => b.totals2.nominalPenggunaanSurkas - a.totals2.nominalPenggunaanSurkas)[0].storeName} (${formatRupiah([...storeData].sort((a, b) => b.totals2.nominalPenggunaanSurkas - a.totals2.nominalPenggunaanSurkas)[0].totals2.nominalPenggunaanSurkas)})</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px;"><strong>Jumlah Toko Dibandingkan:</strong></td>
+                    <td style="padding: 5px;">${storeData.length} Toko</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    `;
+    
+    return html;
 }
 
 // ============ EVENT HANDLERS ============
@@ -1795,15 +1987,26 @@ async function performComparison() {
 }
 
 function displayComparisonResults(storeData, selectedTriwulan) {
+    sessionStorage.setItem('lastComparisonData', JSON.stringify({
+        storeData: storeData,
+        triwulanFilter: selectedTriwulan,
+        timestamp: Date.now()
+    }));
     const triwulanLabel = selectedTriwulan === 'all' ? 'Semua Triwulan' : getTriwulanLabel(selectedTriwulan);
     
     let html = `
-        <div class="comparison-header">
+    <div class="comparison-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
             <h3 style="color: #FF69B4; margin-bottom: 10px;">📊 Hasil Perbandingan - Tahun ${appState.currentYear}</h3>
             <div class="filter-badge" style="display: inline-block; margin-bottom: 20px;">
                 Filter: ${triwulanLabel}
             </div>
         </div>
+        <button class="print-btn" onclick="generatePrintReport()" style="display: inline-flex;">
+            <span>🖨️</span>
+            <span>Cetak Laporan Lengkap</span>
+        </button>
+    </div>
         
         <!-- Comparison Table -->
         <div class="comparison-table">
@@ -2106,5 +2309,6 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
 
 
