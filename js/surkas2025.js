@@ -1876,6 +1876,25 @@ function updateChart() {
                             return context.dataset.label + ': ' + formatRupiah(context.parsed.y || context.parsed);
                         }
                     }
+                },
+                // ✨ NEW: Data Labels Plugin Configuration
+                datalabels: {
+                    color: chartType === 'pie' ? '#fff' : '#000',
+                    font: {
+                        weight: 'bold',
+                        size: chartType === 'pie' ? 11 : 10
+                    },
+                    formatter: function(value, context) {
+                        // Format the value as Rupiah
+                        return formatRupiah(value);
+                    },
+                    anchor: chartType === 'pie' ? 'center' : 'end',
+                    align: chartType === 'pie' ? 'center' : 'top',
+                    offset: chartType === 'pie' ? 0 : 4,
+                    // For pie charts, show percentage as well
+                    display: function(context) {
+                        return context.dataset.data[context.dataIndex] > 0; // Only show if value > 0
+                    }
                 }
             },
             scales: chartType !== 'pie' ? {
@@ -1888,7 +1907,8 @@ function updateChart() {
                     }
                 }
             } : {}
-        }
+        },
+        plugins: [ChartDataLabels] // ✨ Enable the plugin
     });
 }
 
@@ -2154,6 +2174,21 @@ function createComparisonCharts(storeData) {
     const storeNames = storeData.map(s => s.storeName);
     const colors = ['#FF69B4', '#4A90E2', '#FFA500', '#28a745', '#9C27B0', '#E91E63', '#00BCD4', '#FFEB3B'];
     
+    // Common data labels configuration
+    const dataLabelsConfig = {
+        color: '#000',
+        font: {
+            weight: 'bold',
+            size: 10
+        },
+        formatter: function(value, context) {
+            return formatRupiah(value);
+        },
+        anchor: 'end',
+        align: 'top',
+        offset: 4
+    };
+    
     // Chart 1: EBITDA LR
     new Chart(document.getElementById('compChart1'), {
         type: 'bar',
@@ -2176,7 +2211,8 @@ function createComparisonCharts(storeData) {
                     callbacks: {
                         label: (context) => formatRupiah(context.parsed.y)
                     }
-                }
+                },
+                datalabels: dataLabelsConfig
             },
             scales: {
                 y: {
@@ -2186,7 +2222,8 @@ function createComparisonCharts(storeData) {
                     }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
     
     // Chart 2: Sisa Surplus Kas
@@ -2211,6 +2248,21 @@ function createComparisonCharts(storeData) {
                     callbacks: {
                         label: (context) => formatRupiah(context.parsed.y)
                     }
+                },
+                datalabels: {
+                    color: function(context) {
+                        // White text for colored bars
+                        return '#fff';
+                    },
+                    font: {
+                        weight: 'bold',
+                        size: 10
+                    },
+                    formatter: function(value) {
+                        return formatRupiah(value);
+                    },
+                    anchor: 'center',
+                    align: 'center'
                 }
             },
             scales: {
@@ -2220,7 +2272,8 @@ function createComparisonCharts(storeData) {
                     }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
     
     // Chart 3: Laba Net vs Bayar Listrik (Grouped Bar)
@@ -2252,6 +2305,19 @@ function createComparisonCharts(storeData) {
                     callbacks: {
                         label: (context) => context.dataset.label + ': ' + formatRupiah(context.parsed.y)
                     }
+                },
+                datalabels: {
+                    color: '#fff',
+                    font: {
+                        weight: 'bold',
+                        size: 9
+                    },
+                    formatter: function(value) {
+                        return formatRupiah(value);
+                    },
+                    anchor: 'center',
+                    align: 'center',
+                    rotation: -90 // Rotate labels vertically for better readability
                 }
             },
             scales: {
@@ -2262,10 +2328,11 @@ function createComparisonCharts(storeData) {
                     }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
     
-    // Chart 4: Penggunaan Surkas
+    // Chart 4: Penggunaan Surkas (Doughnut)
     new Chart(document.getElementById('compChart4'), {
         type: 'doughnut',
         data: {
@@ -2287,9 +2354,26 @@ function createComparisonCharts(storeData) {
                     callbacks: {
                         label: (context) => context.label + ': ' + formatRupiah(context.parsed)
                     }
+                },
+                datalabels: {
+                    color: '#fff',
+                    font: {
+                        weight: 'bold',
+                        size: 11
+                    },
+                    formatter: function(value, context) {
+                        // Show percentage and value
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return percentage + '%\n' + formatRupiah(value);
+                    },
+                    anchor: 'center',
+                    align: 'center',
+                    textAlign: 'center'
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
@@ -2309,6 +2393,7 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
 
 
 
