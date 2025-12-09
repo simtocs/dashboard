@@ -1157,18 +1157,26 @@ async function generateChartImages(dataRows, totals) {
     };
 
     try {
-        // Chart 1: EBITDA LR by Month (Bar Chart)
+        // ✨ Chart 1: EBITDA LR by Month (LINE CHART)
         const canvas1 = createTempCanvas();
         const ctx1 = canvas1.getContext('2d');
         const chart1 = new Chart(ctx1, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: dataRows.map(row => row[1]),
                 datasets: [{
                     label: 'EBITDA LR',
                     data: dataRows.map(row => parseNumber(row[2])),
-                    backgroundColor: '#FF69B4',
-                    borderWidth: 1
+                    backgroundColor: 'rgba(255, 105, 180, 0.1)',
+                    borderColor: '#FF69B4',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#FF69B4',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
                 }]
             },
             options: {
@@ -1176,13 +1184,18 @@ async function generateChartImages(dataRows, totals) {
                 animation: false,
                 plugins: {
                     legend: { display: true, position: 'top' },
-                    title: { display: true, text: 'EBITDA LR per Bulan', font: { size: 16, weight: 'bold' } },
+                    title: { 
+                        display: true, 
+                        text: 'Trend EBITDA LR per Bulan', 
+                        font: { size: 16, weight: 'bold' } 
+                    },
                     datalabels: {
                         color: '#000',
                         font: { weight: 'bold', size: 10 },
                         formatter: (value) => formatRupiah(value),
                         anchor: 'end',
-                        align: 'top'
+                        align: 'top',
+                        offset: 8
                     }
                 },
                 scales: {
@@ -1198,23 +1211,41 @@ async function generateChartImages(dataRows, totals) {
         chartImages.chart1 = canvas1.toDataURL('image/png');
         chart1.destroy();
 
-        // Chart 2: Laba Net vs Bayar Listrik (Grouped Bar)
+        // ✨ Chart 2: Laba Net vs Bayar Listrik (DUAL LINE CHART)
         const canvas2 = createTempCanvas();
         const ctx2 = canvas2.getContext('2d');
         const chart2 = new Chart(ctx2, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: dataRows.map(row => row[1]),
                 datasets: [
                     {
                         label: 'Laba Net Ditransfer',
                         data: dataRows.map(row => parseNumber(row[4])),
-                        backgroundColor: '#4A90E2'
+                        backgroundColor: 'rgba(74, 144, 226, 0.1)',
+                        borderColor: '#4A90E2',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: '#4A90E2',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
                     },
                     {
                         label: 'Bayar Listrik',
                         data: dataRows.map(row => parseNumber(row[5])),
-                        backgroundColor: '#FFA500'
+                        backgroundColor: 'rgba(255, 165, 0, 0.1)',
+                        borderColor: '#FFA500',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: '#FFA500',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
                     }
                 ]
             },
@@ -1223,13 +1254,18 @@ async function generateChartImages(dataRows, totals) {
                 animation: false,
                 plugins: {
                     legend: { display: true, position: 'top' },
-                    title: { display: true, text: 'Laba Net Ditransfer vs Bayar Listrik', font: { size: 16, weight: 'bold' } },
+                    title: { 
+                        display: true, 
+                        text: 'Perbandingan Laba Net Ditransfer vs Bayar Listrik', 
+                        font: { size: 16, weight: 'bold' } 
+                    },
                     datalabels: {
-                        color: '#fff',
+                        color: '#000',
                         font: { weight: 'bold', size: 9 },
                         formatter: (value) => formatRupiah(value),
-                        anchor: 'center',
-                        align: 'center'
+                        anchor: 'end',
+                        align: 'top',
+                        offset: 6
                     }
                 },
                 scales: {
@@ -1245,21 +1281,46 @@ async function generateChartImages(dataRows, totals) {
         chartImages.chart2 = canvas2.toDataURL('image/png');
         chart2.destroy();
 
-        // Chart 3: Sisa Surplus Kas (Line Chart)
+        // ✨ Chart 3: Sisa Surplus Kas (LINE CHART with area fill)
         const canvas3 = createTempCanvas();
         const ctx3 = canvas3.getContext('2d');
+        
+        // Determine colors based on positive/negative values
+        const surkasData = dataRows.map(row => parseNumber(row[6]));
+        const backgroundColors = surkasData.map(val => 
+            val > 0 ? 'rgba(40, 167, 69, 0.15)' : 'rgba(220, 53, 69, 0.15)'
+        );
+        const borderColors = surkasData.map(val => 
+            val > 0 ? '#28a745' : '#dc3545'
+        );
+        
         const chart3 = new Chart(ctx3, {
             type: 'line',
             data: {
                 labels: dataRows.map(row => row[1]),
                 datasets: [{
                     label: 'Sisa Surplus Kas',
-                    data: dataRows.map(row => parseNumber(row[6])),
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    data: surkasData,
+                    backgroundColor: 'rgba(40, 167, 69, 0.15)',
                     borderColor: '#28a745',
                     borderWidth: 3,
                     fill: true,
-                    tension: 0.4
+                    tension: 0.4,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: surkasData.map(val => val > 0 ? '#28a745' : '#dc3545'),
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    segment: {
+                        borderColor: ctx => {
+                            const value = ctx.p1.parsed.y;
+                            return value < 0 ? '#dc3545' : '#28a745';
+                        },
+                        backgroundColor: ctx => {
+                            const value = ctx.p1.parsed.y;
+                            return value < 0 ? 'rgba(220, 53, 69, 0.15)' : 'rgba(40, 167, 69, 0.15)';
+                        }
+                    }
                 }]
             },
             options: {
@@ -1267,18 +1328,45 @@ async function generateChartImages(dataRows, totals) {
                 animation: false,
                 plugins: {
                     legend: { display: true, position: 'top' },
-                    title: { display: true, text: 'Trend Sisa Surplus Kas', font: { size: 16, weight: 'bold' } },
+                    title: { 
+                        display: true, 
+                        text: 'Trend Sisa Surplus Kas (Positif/Negatif)', 
+                        font: { size: 16, weight: 'bold' } 
+                    },
                     datalabels: {
-                        color: '#000',
+                        color: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value < 0 ? '#dc3545' : '#28a745';
+                        },
                         font: { weight: 'bold', size: 10 },
                         formatter: (value) => formatRupiah(value),
-                        anchor: 'end',
-                        align: 'top'
+                        anchor: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value < 0 ? 'end' : 'end';
+                        },
+                        align: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value < 0 ? 'bottom' : 'top';
+                        },
+                        offset: 8
                     }
                 },
                 scales: {
                     y: {
-                        ticks: { callback: (value) => formatRupiah(value) }
+                        ticks: { 
+                            callback: (value) => formatRupiah(value),
+                            color: function(context) {
+                                return context.tick.value < 0 ? '#dc3545' : '#28a745';
+                            }
+                        },
+                        grid: {
+                            color: function(context) {
+                                return context.tick.value === 0 ? '#000' : 'rgba(0, 0, 0, 0.1)';
+                            },
+                            lineWidth: function(context) {
+                                return context.tick.value === 0 ? 2 : 1;
+                            }
+                        }
                     }
                 }
             },
@@ -1288,7 +1376,7 @@ async function generateChartImages(dataRows, totals) {
         chartImages.chart3 = canvas3.toDataURL('image/png');
         chart3.destroy();
 
-        // Chart 4: Distribution by Triwulan (Pie Chart)
+        // ✨ Chart 4: Distribution by Triwulan (PIE CHART - Keep this as is)
         const triwulanData = {};
         dataRows.forEach(row => {
             const tw = row[0] || 'Unknown';
@@ -1312,7 +1400,11 @@ async function generateChartImages(dataRows, totals) {
                 animation: false,
                 plugins: {
                     legend: { display: true, position: 'right' },
-                    title: { display: true, text: 'Distribusi Sisa Surkas per Triwulan', font: { size: 16, weight: 'bold' } },
+                    title: { 
+                        display: true, 
+                        text: 'Distribusi Sisa Surkas per Triwulan', 
+                        font: { size: 16, weight: 'bold' } 
+                    },
                     datalabels: {
                         color: '#fff',
                         font: { weight: 'bold', size: 12 },
@@ -2611,3 +2703,4 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
