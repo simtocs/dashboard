@@ -1182,6 +1182,13 @@ async function generateChartImages(dataRows, totals) {
             options: {
                 responsive: false,
                 animation: false,
+                layout: {
+                    padding: {
+                    left: 30,
+                    right: 40,
+                    top: 40,
+                    bottom: 20
+                    },
                 plugins: {
                     legend: { display: true, position: 'top' },
                     title: { 
@@ -1253,6 +1260,13 @@ async function generateChartImages(dataRows, totals) {
             options: {
                 responsive: false,
                 animation: false,
+                layout: {
+                    padding: {
+                    left: 30,
+                    right: 40,
+                    top: 40,
+                    bottom: 20
+                    },
                 plugins: {
                     legend: { display: true, position: 'top' },
                     title: { 
@@ -1327,6 +1341,13 @@ async function generateChartImages(dataRows, totals) {
             options: {
                 responsive: false,
                 animation: false,
+                layout: {
+                    padding: {
+                    left: 30,
+                    right: 40,
+                    top: 40,
+                    bottom: 20
+                    },
                 plugins: {
                     legend: { display: true, position: 'top' },
                     title: { 
@@ -1399,6 +1420,13 @@ async function generateChartImages(dataRows, totals) {
             options: {
                 responsive: false,
                 animation: false,
+                layout: {
+                    padding: {
+                    left: 30,
+                    right: 40,
+                    top: 40,
+                    bottom: 20
+                    },
                 plugins: {
                     legend: { display: true, position: 'right' },
                     title: { 
@@ -2706,6 +2734,7 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
 
 
 
