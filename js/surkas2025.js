@@ -1075,40 +1075,273 @@ async function deleteRow(sheetName, rowIndex, tableNumber) {
 }
 
 // ============ PRINT REPORT FUNCTION ============
-function generatePrintReport() {
+async function generatePrintReport() {
     if (!appState.currentSheet || !appState.currentData || appState.currentData.length < 2) {
         alert('⚠️ Tidak ada data untuk dicetak!');
         return;
     }
 
-    const storeName = appState.currentSheet;
-    const currentDate = new Date().toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
+    // Show loading indicator
+    const originalContent = document.body.innerHTML;
+    const loadingDiv = document.createElement('div');
+    loadingDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); z-index: 10000; text-align: center;';
+    loadingDiv.innerHTML = '<div class="loading-spinner" style="margin: 0 auto 20px;"></div><div style="color: #FF69B4; font-weight: 600;">Menyiapkan laporan untuk dicetak...</div>';
+    document.body.appendChild(loadingDiv);
 
-    // Get filtered data
-    const allDataRows1 = appState.currentData.slice(1).filter(row => row[1]);
-    const dataRows1 = filterDataByTriwulan(allDataRows1);
+    try {
+        const storeName = appState.currentSheet;
+        const currentDate = new Date().toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        // Get filtered data
+        const allDataRows1 = appState.currentData.slice(1).filter(row => row[1]);
+        const dataRows1 = filterDataByTriwulan(allDataRows1);
+        
+        const allDataRows2 = appState.currentData2.length > 1 ? appState.currentData2.slice(1).filter(row => row[0]) : [];
+        const dataRows2 = appState.currentFilter !== 'all' 
+            ? allDataRows2.filter(row => {
+                const triwulan = row[0] ? row[0].toString().trim() : '';
+                return triwulan === appState.currentFilter;
+            })
+            : allDataRows2;
+
+        // Calculate totals
+        const totals1 = calculateTotals(dataRows1);
+        const totals2 = calculateTotalsTable2(dataRows2);
+
+        const filterInfo = appState.currentFilter !== 'all' 
+            ? `Filter: ${getTriwulanLabel(appState.currentFilter)}`
+            : 'Menampilkan Semua Triwulan';
+
+        // ✨ Generate chart images
+        const chartImages = await generateChartImages(dataRows1, totals1);
+
+        let printHTML = generatePrintHTML(storeName, currentDate, filterInfo, dataRows1, dataRows2, totals1, totals2, chartImages);
+
+        // Remove loading indicator
+        document.body.removeChild(loadingDiv);
+
+        // Open print window
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(printHTML);
+            printWindow.document.close();
+            
+            printWindow.onload = function() {
+                setTimeout(() => {
+                    printWindow.print();
+                }, 1000); // Increased delay to ensure charts are loaded
+            };
+        } else {
+            alert('❌ Tidak dapat membuka window print. Pastikan popup tidak diblokir.');
+        }
+    } catch (error) {
+        console.error('Error generating print report:', error);
+        document.body.removeChild(loadingDiv);
+        alert('❌ Terjadi kesalahan saat membuat laporan: ' + error.message);
+    }
+}
+
+async function generateChartImages(dataRows, totals) {
+    const chartImages = {};
     
-    const allDataRows2 = appState.currentData2.length > 1 ? appState.currentData2.slice(1).filter(row => row[0]) : [];
-    const dataRows2 = appState.currentFilter !== 'all' 
-        ? allDataRows2.filter(row => {
-            const triwulan = row[0] ? row[0].toString().trim() : '';
-            return triwulan === appState.currentFilter;
-        })
-        : allDataRows2;
+    // Create temporary canvas elements
+    const createTempCanvas = (width = 800, height = 400) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        return canvas;
+    };
 
-    // Calculate totals
-    const totals1 = calculateTotals(dataRows1);
-    const totals2 = calculateTotalsTable2(dataRows2);
+    try {
+        // Chart 1: EBITDA LR by Month (Bar Chart)
+        const canvas1 = createTempCanvas();
+        const ctx1 = canvas1.getContext('2d');
+        const chart1 = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: dataRows.map(row => row[1]),
+                datasets: [{
+                    label: 'EBITDA LR',
+                    data: dataRows.map(row => parseNumber(row[2])),
+                    backgroundColor: '#FF69B4',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: false,
+                animation: false,
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    title: { display: true, text: 'EBITDA LR per Bulan', font: { size: 16, weight: 'bold' } },
+                    datalabels: {
+                        color: '#000',
+                        font: { weight: 'bold', size: 10 },
+                        formatter: (value) => formatRupiah(value),
+                        anchor: 'end',
+                        align: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: (value) => formatRupiah(value) }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+        await new Promise(resolve => setTimeout(resolve, 500));
+        chartImages.chart1 = canvas1.toDataURL('image/png');
+        chart1.destroy();
 
-    const filterInfo = appState.currentFilter !== 'all' 
-        ? `Filter: ${getTriwulanLabel(appState.currentFilter)}`
-        : 'Menampilkan Semua Triwulan';
+        // Chart 2: Laba Net vs Bayar Listrik (Grouped Bar)
+        const canvas2 = createTempCanvas();
+        const ctx2 = canvas2.getContext('2d');
+        const chart2 = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: dataRows.map(row => row[1]),
+                datasets: [
+                    {
+                        label: 'Laba Net Ditransfer',
+                        data: dataRows.map(row => parseNumber(row[4])),
+                        backgroundColor: '#4A90E2'
+                    },
+                    {
+                        label: 'Bayar Listrik',
+                        data: dataRows.map(row => parseNumber(row[5])),
+                        backgroundColor: '#FFA500'
+                    }
+                ]
+            },
+            options: {
+                responsive: false,
+                animation: false,
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    title: { display: true, text: 'Laba Net Ditransfer vs Bayar Listrik', font: { size: 16, weight: 'bold' } },
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 9 },
+                        formatter: (value) => formatRupiah(value),
+                        anchor: 'center',
+                        align: 'center'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: (value) => formatRupiah(value) }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+        await new Promise(resolve => setTimeout(resolve, 500));
+        chartImages.chart2 = canvas2.toDataURL('image/png');
+        chart2.destroy();
 
-    let printHTML = `
+        // Chart 3: Sisa Surplus Kas (Line Chart)
+        const canvas3 = createTempCanvas();
+        const ctx3 = canvas3.getContext('2d');
+        const chart3 = new Chart(ctx3, {
+            type: 'line',
+            data: {
+                labels: dataRows.map(row => row[1]),
+                datasets: [{
+                    label: 'Sisa Surplus Kas',
+                    data: dataRows.map(row => parseNumber(row[6])),
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    borderColor: '#28a745',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: false,
+                animation: false,
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    title: { display: true, text: 'Trend Sisa Surplus Kas', font: { size: 16, weight: 'bold' } },
+                    datalabels: {
+                        color: '#000',
+                        font: { weight: 'bold', size: 10 },
+                        formatter: (value) => formatRupiah(value),
+                        anchor: 'end',
+                        align: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: { callback: (value) => formatRupiah(value) }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+        await new Promise(resolve => setTimeout(resolve, 500));
+        chartImages.chart3 = canvas3.toDataURL('image/png');
+        chart3.destroy();
+
+        // Chart 4: Distribution by Triwulan (Pie Chart)
+        const triwulanData = {};
+        dataRows.forEach(row => {
+            const tw = row[0] || 'Unknown';
+            const value = parseNumber(row[6]); // Sisa Surkas
+            triwulanData[tw] = (triwulanData[tw] || 0) + value;
+        });
+
+        const canvas4 = createTempCanvas(600, 400);
+        const ctx4 = canvas4.getContext('2d');
+        const chart4 = new Chart(ctx4, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(triwulanData).map(tw => `Triwulan ${tw}`),
+                datasets: [{
+                    data: Object.values(triwulanData),
+                    backgroundColor: ['#FF69B4', '#4A90E2', '#FFA500', '#28a745', '#9C27B0']
+                }]
+            },
+            options: {
+                responsive: false,
+                animation: false,
+                plugins: {
+                    legend: { display: true, position: 'right' },
+                    title: { display: true, text: 'Distribusi Sisa Surkas per Triwulan', font: { size: 16, weight: 'bold' } },
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 12 },
+                        formatter: function(value, context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return percentage + '%\n' + formatRupiah(value);
+                        },
+                        anchor: 'center',
+                        align: 'center',
+                        textAlign: 'center'
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+        await new Promise(resolve => setTimeout(resolve, 500));
+        chartImages.chart4 = canvas4.toDataURL('image/png');
+        chart4.destroy();
+
+    } catch (error) {
+        console.error('Error generating chart images:', error);
+    }
+
+    return chartImages;
+}
+
+function generatePrintHTML(storeName, currentDate, filterInfo, dataRows1, dataRows2, totals1, totals2, chartImages) {
+    let html = `
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -1117,7 +1350,7 @@ function generatePrintReport() {
     <title>Laporan Surplus Kas Toko - ${storeName}</title>
     <style>
         @page {
-            size: A4 landscape;
+            size: A4 portrait;
             margin: 15mm;
         }
         
@@ -1183,7 +1416,7 @@ function generatePrintReport() {
         
         .summary-cards {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             margin-bottom: 20px;
         }
@@ -1220,20 +1453,21 @@ function generatePrintReport() {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
-            font-size: 9pt;
+            font-size: 8pt;
         }
         
         .data-table th {
             background: linear-gradient(to right, #FF69B4, #4A90E2);
             color: white;
-            padding: 10px 8px;
+            padding: 8px 6px;
             text-align: center;
             font-weight: bold;
             border: 1px solid #ddd;
+            font-size: 8pt;
         }
         
         .data-table td {
-            padding: 8px;
+            padding: 6px;
             border: 1px solid #ddd;
             text-align: left;
         }
@@ -1271,10 +1505,42 @@ function generatePrintReport() {
             color: #6c757d;
         }
         
-        .data-table tr.grand-total {
-            background: #f8f9fa;
-            font-weight: bold;
-            border-top: 3px solid #FF69B4;
+        .chart-section {
+            margin: 30px 0;
+            page-break-inside: avoid;
+        }
+        
+        .chart-container {
+            text-align: center;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .chart-item {
+            text-align: center;
+            page-break-inside: avoid;
+        }
+        
+        .chart-item img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
         }
         
         .footer-section {
@@ -1318,64 +1584,10 @@ function generatePrintReport() {
             page-break-before: always;
         }
         
-        .comparison-section {
-            margin-top: 30px;
-        }
-        
-        .comparison-summary-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .comparison-summary-card {
-            background: #f8f9fa;
-            padding: 15px;
-            border-left: 4px solid #9C27B0;
-            border-radius: 5px;
-            text-align: center;
-        }
-        
-        .comparison-summary-card .icon {
-            font-size: 24pt;
-            margin-bottom: 8px;
-        }
-        
-        .comparison-summary-card .label {
-            font-size: 8pt;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        
-        .comparison-summary-card .value {
-            font-size: 11pt;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .comparison-summary-card .amount {
-            font-size: 10pt;
-            font-weight: bold;
-            margin-top: 5px;
-        }
-        
-        .comparison-summary-card .amount.positive {
-            color: #28a745;
-        }
-        
-        .comparison-summary-card .amount.negative {
-            color: #dc3545;
-        }
-        
         @media print {
             body {
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
-            }
-            
-            .no-print {
-                display: none !important;
             }
         }
     </style>
@@ -1416,13 +1628,13 @@ function generatePrintReport() {
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 8%;">TRIWULAN</th>
+                <th style="width: 8%;">TW</th>
                 <th style="width: 12%;">BULAN</th>
                 <th style="width: 15%;">EBITDA LR</th>
                 <th style="width: 15%;">PENGGUNAAN LABA KAS</th>
-                <th style="width: 15%;">LABA NET DITRANSFER</th>
+                <th style="width: 15%;">LABA NET</th>
                 <th style="width: 15%;">BAYAR LISTRIK</th>
-                <th style="width: 20%;">SISA SURPLUS KAS</th>
+                <th style="width: 20%;">SISA SURKAS</th>
             </tr>
         </thead>
         <tbody>
@@ -1434,7 +1646,7 @@ function generatePrintReport() {
         if (data.sisaSurkas > 0) colorClass = 'positive';
         else if (data.sisaSurkas < 0) colorClass = 'negative';
         
-        printHTML += `
+        html += `
             <tr>
                 <td class="triwulan">${data.triwulan}</td>
                 <td>${data.bulan}</td>
@@ -1447,14 +1659,40 @@ function generatePrintReport() {
         `;
     });
 
-    printHTML += `
+    html += `
         </tbody>
     </table>
 `;
 
+    // ✨ ADD CHARTS SECTION
+    if (chartImages && Object.keys(chartImages).length > 0) {
+        html += `
+    <div class="page-break"></div>
+    <div class="section-title">📈 VISUALISASI DATA - GRAFIK ANALISIS</div>
+    
+    <div class="chart-section">
+        <div class="chart-container">
+            <img src="${chartImages.chart1}" alt="EBITDA LR Chart">
+        </div>
+        
+        <div class="chart-container">
+            <img src="${chartImages.chart2}" alt="Laba Net vs Listrik Chart">
+        </div>
+        
+        <div class="chart-container">
+            <img src="${chartImages.chart3}" alt="Sisa Surplus Kas Trend">
+        </div>
+        
+        <div class="chart-container">
+            <img src="${chartImages.chart4}" alt="Distribution Chart">
+        </div>
+    </div>
+`;
+    }
+
     // TABLE 2: PENGGUNAAN SURKAS
     if (dataRows2.length > 0) {
-        printHTML += `
+        html += `
     <div class="section-title page-break">📋 PENGGUNAAN SURPLUS KAS - TAHUN ${appState.currentYear}</div>
     
     <div class="summary-cards">
@@ -1471,9 +1709,9 @@ function generatePrintReport() {
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 10%;">TRIWULAN</th>
+                <th style="width: 10%;">TW</th>
                 <th style="width: 15%;">BULAN</th>
-                <th style="width: 25%;">NOMINAL PENGGUNAAN</th>
+                <th style="width: 25%;">NOMINAL</th>
                 <th style="width: 50%;">TUJUAN PENGGUNAAN</th>
             </tr>
         </thead>
@@ -1483,7 +1721,7 @@ function generatePrintReport() {
         dataRows2.forEach((row) => {
             const data = processRowDataTable2(row);
             
-            printHTML += `
+            html += `
             <tr>
                 <td class="center triwulan">${data.no}</td>
                 <td>${data.bulan}</td>
@@ -1493,21 +1731,14 @@ function generatePrintReport() {
             `;
         });
 
-        printHTML += `
+        html += `
         </tbody>
     </table>
 `;
     }
 
-    // Check if there's comparison data stored
-    const comparisonData = sessionStorage.getItem('lastComparisonData');
-    if (comparisonData) {
-        const parsed = JSON.parse(comparisonData);
-        printHTML += generateComparisonPrintSection(parsed.storeData, parsed.triwulanFilter);
-    }
-
     // Footer with signatures
-    printHTML += `
+    html += `
     <div class="footer-section">
         <div class="signature-area">
             <div class="signature-box">
@@ -1518,27 +1749,14 @@ function generatePrintReport() {
         
         <div class="footer-notes">
             Dokumen ini dicetak secara otomatis dari SIMTOCS - Sistem Informasi Manajemen Toko Carang Sari<br>
-            Dicetak pada: ${currentDate}
+            Dicetak pada: ${currentDate} | Termasuk visualisasi grafik analisis data
         </div>
     </div>
 </body>
 </html>
 `;
 
-    // Open print window
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-        printWindow.document.write(printHTML);
-        printWindow.document.close();
-        
-        printWindow.onload = function() {
-            setTimeout(() => {
-                printWindow.print();
-            }, 500);
-        };
-    } else {
-        alert('❌ Tidak dapat membuka window print. Pastikan popup tidak diblokir.');
-    }
+    return html;
 }
 
 // ============ GENERATE COMPARISON PRINT SECTION ============
@@ -2393,7 +2611,3 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
-
-
-
-
