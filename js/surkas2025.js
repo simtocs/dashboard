@@ -1149,7 +1149,7 @@ async function generateChartImages(dataRows, totals) {
     const chartImages = {};
     
     // Create temporary canvas elements
-    const createTempCanvas = (width = 800, height = 400) => {
+    const createTempCanvas = (width = 1000, height = 450) => {
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -1195,7 +1195,8 @@ async function generateChartImages(dataRows, totals) {
                         formatter: (value) => formatRupiah(value),
                         anchor: 'end',
                         align: 'top',
-                        offset: 8
+                        offset: 4,
+                        clip: false
                     }
                 },
                 scales: {
@@ -1384,7 +1385,7 @@ async function generateChartImages(dataRows, totals) {
             triwulanData[tw] = (triwulanData[tw] || 0) + value;
         });
 
-        const canvas4 = createTempCanvas(600, 400);
+        const canvas4 = createTempCanvas(800, 450);
         const ctx4 = canvas4.getContext('2d');
         const chart4 = new Chart(ctx4, {
             type: 'pie',
@@ -1609,11 +1610,13 @@ function generatePrintHTML(storeName, currentDate, filterInfo, dataRows1, dataRo
         }
         
         .chart-container img {
-            max-width: 100%;
-            height: auto;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        object-fit: contain;
         }
         
         .chart-grid {
@@ -2703,5 +2706,6 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
 
 
