@@ -1188,6 +1188,7 @@ async function generateChartImages(dataRows, totals) {
                     right: 40,
                     top: 40,
                     bottom: 20
+                    }
                     },
                 plugins: {
                     legend: { display: true, position: 'top' },
@@ -1266,6 +1267,7 @@ async function generateChartImages(dataRows, totals) {
                     right: 40,
                     top: 40,
                     bottom: 20
+                    }
                     },
                 plugins: {
                     legend: { display: true, position: 'top' },
@@ -1347,6 +1349,7 @@ async function generateChartImages(dataRows, totals) {
                     right: 40,
                     top: 40,
                     bottom: 20
+                    }
                     },
                 plugins: {
                     legend: { display: true, position: 'top' },
@@ -1426,6 +1429,7 @@ async function generateChartImages(dataRows, totals) {
                     right: 40,
                     top: 40,
                     bottom: 20
+                    }
                     },
                 plugins: {
                     legend: { display: true, position: 'right' },
@@ -2734,6 +2738,7 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
 
 
 
