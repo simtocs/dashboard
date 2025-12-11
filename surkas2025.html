@@ -99,67 +99,68 @@
                 <!-- Table 1 Fields -->
                 <div id="table1Fields">
                     <div class="form-group">
-                        <label for="triwulan">Triwulan *</label>
-                        <select id="triwulan" required>
-                            <option value="">Pilih Triwulan</option>
-                            <option value="1">TW1 (Q1)</option>
-                            <option value="2">TW2 (Q2)</option>
-                            <option value="3">TW3 (Q3)</option>
-                            <option value="4">TW4 (Q4)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="bulan">Bulan *</label>
-                        <input type="text" id="bulan" placeholder="Contoh: Januari" required>
+                    <label for="triwulan">Triwulan *</label>
+                    <select id="triwulan" name="triwulan" required>
+                    <option value="">Pilih Triwulan</option>
+                    <option value="1">TW1 (Q1)</option>
+                    <option value="2">TW2 (Q2)</option>
+                    <option value="3">TW3 (Q3)</option>
+                    <option value="4">TW4 (Q4)</option>
+                    </select>
                     </div>
 
                     <div class="form-group">
-                        <label for="ebitdaLR">EBITDA LR *</label>
-                        <input type="number" id="ebitdaLR" placeholder="0" required oninput="calculateValues()">
+                    <label for="bulan">Bulan *</label>
+                    <input type="text" id="bulan" name="bulan" placeholder="Contoh: Januari" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="penggunaanLabaKas">Penggunaan Laba Kas *</label>
-                        <input type="number" id="penggunaanLabaKas" placeholder="0" required oninput="calculateValues()">
+                    <label for="ebitdaLR">EBITDA LR *</label>
+                    <input type="number" id="ebitdaLR" name="ebitdaLR" placeholder="0" required oninput="calculateValues()">
                     </div>
 
                     <div class="form-group">
-                        <label for="labaNetDitransfer">Laba Net Ditransfer (Auto)</label>
-                        <input type="number" id="labaNetDitransfer" placeholder="Otomatis dihitung" readonly style="background: #e9ecef; cursor: not-allowed;">
+                    <label for="penggunaanLabaKas">Penggunaan Laba Kas *</label>
+                    <input type="number" id="penggunaanLabaKas" name="penggunaanLabaKas" placeholder="0" required oninput="calculateValues()">
                     </div>
 
                     <div class="form-group">
-                        <label for="bayarListrik">Bayar Listrik *</label>
-                        <input type="number" id="bayarListrik" placeholder="0" required oninput="calculateValues()">
+                    <label for="labaNetDitransfer">Laba Net Ditransfer (Auto)</label>
+                    <input type="number" id="labaNetDitransfer" name="labaNetDitransfer" placeholder="Otomatis dihitung" readonly style="background: #e9ecef; cursor: not-allowed;">
                     </div>
 
                     <div class="form-group">
-                        <label for="sisaSurkas">Sisa Surplus Kas (Auto)</label>
-                        <input type="number" id="sisaSurkas" placeholder="Otomatis dihitung" readonly style="background: #e9ecef; cursor: not-allowed;">
+                    <label for="bayarListrik">Bayar Listrik *</label>
+                    <input type="number" id="bayarListrik" name="bayarListrik" placeholder="0" required oninput="calculateValues()">
+                    </div>
+
+                    <div class="form-group">
+                    <label for="sisaSurkas">Sisa Surplus Kas (Auto)</label>
+                    <input type="number" id="sisaSurkas" name="sisaSurkas" placeholder="Otomatis dihitung" readonly style="background: #e9ecef; cursor: not-allowed;">
                     </div>
                 </div>
 
+                    
                 <!-- Table 2 Fields -->
                 <div id="table2Fields" style="display: none;">
                     <div class="form-group">
-                        <label for="no2">Triwulan (Q)</label>
-                        <input type="text" id="no2" placeholder="Contoh: 1">
+                    <label for="no2">Triwulan (Q)</label>
+                    <input type="text" id="no2" name="no2" placeholder="Contoh: 1">
                     </div>
 
                     <div class="form-group">
-                        <label for="bulan2">Bulan *</label>
-                        <input type="text" id="bulan2" placeholder="Contoh: Januari 2025">
+                    <label for="bulan2">Bulan *</label>
+                    <input type="text" id="bulan2" name="bulan2" placeholder="Contoh: Januari 2025">
                     </div>
 
                     <div class="form-group">
-                        <label for="nominalPenggunaanSurkas">Nominal Penggunaan Surkas *</label>
-                        <input type="number" id="nominalPenggunaanSurkas" placeholder="0">
+                    <label for="nominalPenggunaanSurkas">Nominal Penggunaan Surkas *</label>
+                    <input type="number" id="nominalPenggunaanSurkas" name="nominalPenggunaanSurkas" placeholder="0">
                     </div>
 
                     <div class="form-group">
-                        <label for="tujuanPenggunaanSurkas">Tujuan Penggunaan Surkas *</label>
-                        <input type="text" id="tujuanPenggunaanSurkas" placeholder="Pembentukan Cadangan Renovasi...">
+                    <label for="tujuanPenggunaanSurkas">Tujuan Penggunaan Surkas *</label>
+                    <input type="text" id="tujuanPenggunaanSurkas" name="tujuanPenggunaanSurkas" placeholder="Pembentukan Cadangan Renovasi...">
                     </div>
                 </div>
 
@@ -245,6 +246,7 @@
 </div>
 </body>
 </html>
+
 
 
 
