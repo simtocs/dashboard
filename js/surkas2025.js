@@ -884,7 +884,8 @@ function openEditModal(rowIndex, tableNumber) {
 
         document.getElementById('modalTitle').textContent = 'Edit Data - Surplus Kas';
         document.getElementById('submitBtnText').textContent = 'Update';
-        document.getElementById('editRowIndex').value = rowIndex;
+        const yearOffset = appState.currentYear === '2026' ? 26 : 0;
+        document.getElementById('editRowIndex').value = rowIndex + yearOffset;
         document.getElementById('editTableNumber').value = tableNumber;
         
         document.getElementById('table1Fields').style.display = 'block';
@@ -908,7 +909,8 @@ function openEditModal(rowIndex, tableNumber) {
 
         document.getElementById('modalTitle').textContent = 'Edit Data - Penggunaan Surkas';
         document.getElementById('submitBtnText').textContent = 'Update';
-        document.getElementById('editRowIndex').value = rowIndex;
+        const yearOffset = appState.currentYear === '2026' ? 26 : 0;
+        document.getElementById('editRowIndex').value = rowIndex + yearOffset;
         document.getElementById('editTableNumber').value = tableNumber;
         
         document.getElementById('table1Fields').style.display = 'none';
@@ -2052,8 +2054,8 @@ function handleDelete(rowIndex, tableNumber) {
     if (!confirm('⚠️ Yakin ingin menghapus data ini?\n\nData yang dihapus tidak dapat dikembalikan!')) {
         return;
     }
-    
-    deleteRow(appState.currentSheet, rowIndex, tableNumber);
+    const yearOffset = appState.currentYear === '2026' ? 26 : 0;
+    deleteRow(appState.currentSheet, rowIndex + yearOffset, tableNumber);  // ← ADD yearOffset here!
 }
 
 async function handleFormSubmit(event) {
@@ -2738,6 +2740,7 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
 
 
 
