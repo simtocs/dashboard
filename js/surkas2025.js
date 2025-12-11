@@ -843,85 +843,132 @@ function openAddModal(tableNumber) {
     document.getElementById('editRowIndex').value = '';
     document.getElementById('editTableNumber').value = tableNumber;
     
+    // Get all form inputs
+    const table1Inputs = document.querySelectorAll('#table1Fields input, #table1Fields select');
+    const table2Inputs = document.querySelectorAll('#table2Fields input, #table2Fields select');
+    
     if (tableNumber === 1) {
         document.getElementById('table1Fields').style.display = 'block';
         document.getElementById('table2Fields').style.display = 'none';
-        document.getElementById('triwulan').required = true;
-        document.getElementById('bulan').required = true;
-        document.getElementById('ebitdaLR').required = true;
-        document.getElementById('penggunaanLabaKas').required = true;
-        document.getElementById('bayarListrik').required = true;
-        document.getElementById('no2').required = false;
-        document.getElementById('bulan2').required = false;
-        document.getElementById('nominalPenggunaanSurkas').required = false;
-        document.getElementById('tujuanPenggunaanSurkas').required = false;
+        
+        // Enable required for table 1, disable for table 2
+        table1Inputs.forEach(input => {
+            if (input.id !== 'labaNetDitransfer' && input.id !== 'sisaSurkas') {
+                input.setAttribute('required', 'required');
+            }
+        });
+        table2Inputs.forEach(input => input.removeAttribute('required'));
+        
     } else {
         document.getElementById('table1Fields').style.display = 'none';
         document.getElementById('table2Fields').style.display = 'block';
-        document.getElementById('no2').required = true;
-        document.getElementById('bulan2').required = true;
-        document.getElementById('nominalPenggunaanSurkas').required = true;
-        document.getElementById('tujuanPenggunaanSurkas').required = true;
-        document.getElementById('triwulan').required = false;
-        document.getElementById('bulan').required = false;
-        document.getElementById('ebitdaLR').required = false;
-        document.getElementById('penggunaanLabaKas').required = false;
-        document.getElementById('bayarListrik').required = false;
+        
+        // Enable required for table 2, disable for table 1
+        table2Inputs.forEach(input => {
+            // Set required on all fields except 'no2'
+            if (input.id !== 'no2') {
+                input.setAttribute('required', 'required');
+            }
+        });
+        table1Inputs.forEach(input => input.removeAttribute('required'));
     }
     
     document.getElementById('dataModal').classList.add('active');
 }
 
 function openEditModal(rowIndex, tableNumber) {
+    // Get all form inputs for later required attribute management
+    const table1Inputs = document.querySelectorAll('#table1Fields input, #table1Fields select');
+    const table2Inputs = document.querySelectorAll('#table2Fields input, #table2Fields select');
+    
     if (tableNumber === 1) {
+        // Validate data exists
         if (!appState.currentData || appState.currentData.length < rowIndex) {
             alert('Data tidak ditemukan!');
             return;
         }
 
+        // Get row data
         const row = appState.currentData[rowIndex - 1];
         const data = processRowData(row);
 
+        // Set modal title and mode
         document.getElementById('modalTitle').textContent = 'Edit Data - Surplus Kas';
         document.getElementById('submitBtnText').textContent = 'Update';
+        
+        // Set row index with year offset
         const yearOffset = appState.currentYear === '2026' ? 26 : 0;
         document.getElementById('editRowIndex').value = rowIndex + yearOffset;
         document.getElementById('editTableNumber').value = tableNumber;
         
+        // Show/hide appropriate field sections
         document.getElementById('table1Fields').style.display = 'block';
         document.getElementById('table2Fields').style.display = 'none';
         
+        // Populate form fields
         document.getElementById('triwulan').value = data.triwulan;
         document.getElementById('bulan').value = data.bulan;
         document.getElementById('ebitdaLR').value = data.ebitdaLR;
         document.getElementById('penggunaanLabaKas').value = data.penggunaanLabaKas;
         document.getElementById('bayarListrik').value = data.bayarListrik;
         
+        // Calculate auto-filled fields
         calculateValues();
+        
+        // Manage required attributes: enable for table 1, disable for table 2
+        table1Inputs.forEach(input => {
+            // Don't set required on readonly/auto-calculated fields
+            if (input.id !== 'labaNetDitransfer' && input.id !== 'sisaSurkas') {
+                input.setAttribute('required', 'required');
+            }
+        });
+        table2Inputs.forEach(input => {
+            input.removeAttribute('required');
+        });
+        
     } else if (tableNumber === 2) {
+        // Validate data exists
         if (!appState.currentData2 || appState.currentData2.length < rowIndex) {
             alert('Data tidak ditemukan!');
             return;
         }
 
+        // Get row data
         const row = appState.currentData2[rowIndex - 1];
         const data = processRowDataTable2(row);
 
+        // Set modal title and mode
         document.getElementById('modalTitle').textContent = 'Edit Data - Penggunaan Surkas';
         document.getElementById('submitBtnText').textContent = 'Update';
+        
+        // Set row index with year offset
         const yearOffset = appState.currentYear === '2026' ? 26 : 0;
         document.getElementById('editRowIndex').value = rowIndex + yearOffset;
         document.getElementById('editTableNumber').value = tableNumber;
         
+        // Show/hide appropriate field sections
         document.getElementById('table1Fields').style.display = 'none';
         document.getElementById('table2Fields').style.display = 'block';
         
+        // Populate form fields
         document.getElementById('no2').value = data.no;
         document.getElementById('bulan2').value = data.bulan;
         document.getElementById('nominalPenggunaanSurkas').value = data.nominalPenggunaanSurkas;
         document.getElementById('tujuanPenggunaanSurkas').value = data.tujuanPenggunaanSurkas;
+        
+        // Manage required attributes: enable for table 2, disable for table 1
+        table2Inputs.forEach(input => {
+            // Set required on all table 2 fields except 'no2' which can be optional
+            if (input.id !== 'no2') {
+                input.setAttribute('required', 'required');
+            }
+        });
+        table1Inputs.forEach(input => {
+            input.removeAttribute('required');
+        });
     }
 
+    // Open the modal
     document.getElementById('dataModal').classList.add('active');
 }
 
@@ -2111,13 +2158,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }, 500);
 });
 
-window.onclick = function(event) {
-    const modal = document.getElementById('dataModal');
-    if (event.target === modal) {
-        closeModal();
-    }
-}
-
 // ============ CHART VISUALIZATION ============
 let currentChart = null;
 
@@ -2740,6 +2780,7 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
 
 
 
