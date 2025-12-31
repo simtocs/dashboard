@@ -43,37 +43,48 @@
 
         <!-- Controls section -->
         <div class="controls">
-            <a href="index.html" class="back-btn">
-                <span>🏠</span>
-                <span>Kembali ke Dashboard</span>
-            </a>
-            <div class="select-wrapper">
-                <select id="monthSelect" onchange="handleMonthChange()">
-                    <option value="">Pilih Bulan...</option>
-                    <option value="Informasi_Umum">Cek Tagihan Pembayaran</option>
-                    <option value="Januari_2025">Januari 2025</option>
-                    <option value="Februari_2025">Februari 2025</option>
-                    <option value="Maret_2025">Maret 2025</option>
-                    <option value="April_2025">April 2025</option>
-                    <option value="Mei_2025">Mei 2025</option>
-                    <option value="Juni_2025">Juni 2025</option>
-                    <option value="Juli_2025">Juli 2025</option>
-                    <option value="Agustus_2025">Agustus 2025</option>
-                    <option value="September_2025">September 2025</option>
-                    <option value="Oktober_2025">Oktober 2025</option>
-                    <option value="November_2025">November 2025</option>
-                    <option value="Desember_2025">Desember 2025</option>
-                    <option value="Januari_2026">Januari 2026</option>
-                </select>
-            </div>
-            <button class="add-btn" onclick="openAddModal()" id="addBtn" style="display: none;">
-                <span>➕</span>
-                <span>Tambah Data</span>
-            </button>
-            <button class="refresh-btn" onclick="handleRefresh()">
-                <span>🔄</span>
-                <span>Refresh</span>
-            </button>
+        <a href="index.html" class="back-btn">
+        <span>🏠</span>
+        <span>Kembali ke Dashboard</span>
+        </a>
+    
+        <!-- Year Dropdown -->
+        <div class="select-wrapper">
+        <select id="yearSelect" onchange="handleYearChange()">
+            <option value="">Pilih Tahun...</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+        </select>
+        </div>
+    
+        <!-- Month Dropdown (disabled until year is selected) -->
+        <div class="select-wrapper">
+        <select id="monthSelect" onchange="handleMonthChange()" disabled>
+            <option value="">Pilih Bulan...</option>
+            <option value="Informasi_Umum">Cek Tagihan Pembayaran</option>
+            <option value="Januari">Januari</option>
+            <option value="Februari">Februari</option>
+            <option value="Maret">Maret</option>
+            <option value="April">April</option>
+            <option value="Mei">Mei</option>
+            <option value="Juni">Juni</option>
+            <option value="Juli">Juli</option>
+            <option value="Agustus">Agustus</option>
+            <option value="September">September</option>
+            <option value="Oktober">Oktober</option>
+            <option value="November">November</option>
+            <option value="Desember">Desember</option>
+        </select>
+        </div>
+    
+        <button class="add-btn" onclick="openAddModal()" id="addBtn" style="display: none;">
+        <span>➕</span>
+        <span>Tambah Data</span>
+        </button>
+        <button class="refresh-btn" onclick="handleRefresh()">
+        <span>🔄</span>
+        <span>Refresh</span>
+        </button>
         </div>
         
         <!-- Content section (dynamically populated) -->
