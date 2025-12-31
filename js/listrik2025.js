@@ -124,6 +124,10 @@ if (checkAuth()) {
     }
 }
 
+// ============ DROPDOWN HANDLING ============
+let selectedYear = null;
+let selectedMonth = null;
+
 // ============ CONFIG ============
 const CONFIG = {
     CLIENT_ID: '874016971039-g91m2mt64mid7sh9vkk14vpjmpbc095o.apps.googleusercontent.com',
@@ -1331,27 +1335,188 @@ try {
     throw error;
 }
 }
+
 // ============ EVENT HANDLERS ============
+/**
+ * Handle year selection change
+ */
+function handleYearChange() {
+    const yearSelect = document.getElementById('yearSelect');
+    const monthSelect = document.getElementById('monthSelect');
+    
+    selectedYear = yearSelect.value;
+    
+    if (selectedYear) {
+        // Enable month dropdown
+        monthSelect.disabled = false;
+        monthSelect.style.opacity = '1';
+        monthSelect.style.cursor = 'pointer';
+        
+        // Reset month selection
+        monthSelect.value = '';
+        selectedMonth = null;
+        
+        // Clear content area
+        showEmptyState();
+        document.getElementById('content').innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📅</div>
+                <h2>Pilih Bulan untuk Tahun ${selectedYear}</h2>
+                <p>Gunakan dropdown bulan untuk memilih data yang ingin ditampilkan</p>
+            </div>
+        `;
+    } else {
+        // Disable month dropdown if no year selected
+        monthSelect.disabled = true;
+        monthSelect.style.opacity = '0.5';
+        monthSelect.style.cursor = 'not-allowed';
+        monthSelect.value = '';
+        selectedMonth = null;
+        showEmptyState();
+    }
+}
+
+/**
+ * Handle month selection change
+ */
 function handleMonthChange() {
-const monthSelect = document.getElementById('monthSelect');
-const selectedMonth = monthSelect.value;
-if (selectedMonth) {
-    saveLastMonth(selectedMonth);
-    loadMonthData(selectedMonth);
-} else {
-    showEmptyState();
+    const yearSelect = document.getElementById('yearSelect');
+    const monthSelect = document.getElementById('monthSelect');
+    
+    selectedYear = yearSelect.value;
+    selectedMonth = monthSelect.value;
+    
+    if (!selectedYear) {
+        alert('⚠️ Pilih tahun terlebih dahulu!');
+        monthSelect.value = '';
+        return;
+    }
+    
+    if (selectedMonth) {
+        // Build the sheet name
+        let sheetName;
+        if (selectedMonth === 'Informasi_Umum') {
+            sheetName = 'Informasi_Umum';
+        } else {
+            sheetName = `${selectedMonth}_${selectedYear}`;
+        }
+        
+        // Save to session storage
+        saveLastSelection(selectedYear, selectedMonth);
+        
+        // Load the data
+        loadMonthData(sheetName);
+    } else {
+        showEmptyState();
+    }
 }
-}
+
+/**
+ * Handle refresh button
+ */
 function handleRefresh() {
-const monthSelect = document.getElementById('monthSelect');
-const selectedMonth = monthSelect.value;
-if (!selectedMonth) {
-    alert('Pilih bulan terlebih dahulu');
-    return;
+    const yearSelect = document.getElementById('yearSelect');
+    const monthSelect = document.getElementById('monthSelect');
+    
+    selectedYear = yearSelect.value;
+    selectedMonth = monthSelect.value;
+    
+    if (!selectedYear) {
+        alert('⚠️ Pilih tahun terlebih dahulu!');
+        return;
+    }
+    
+    if (!selectedMonth) {
+        alert('⚠️ Pilih bulan terlebih dahulu!');
+        return;
+    }
+    
+    // Build the sheet name
+    let sheetName;
+    if (selectedMonth === 'Informasi_Umum') {
+        sheetName = 'Informasi_Umum';
+    } else {
+        sheetName = `${selectedMonth}_${selectedYear}`;
+    }
+    
+    loadMonthData(sheetName, true);
+}
+
+// ============ SESSION STORAGE FOR LAST SELECTION ============
+/**
+ * Save the last selected year and month
+ */
+function saveLastSelection(year, month) {
+    try {
+        const data = { 
+            year: year, 
+            month: month, 
+            timestamp: Date.now() 
+        };
+        sessionStorage.setItem('lastSelection', JSON.stringify(data));
+    } catch (e) {
+        console.warn('Could not save to sessionStorage:', e);
+    }
+}
+
+/**
+ * Get the last selected year and month
+ */
+function getLastSelection() {
+    try {
+        const stored = sessionStorage.getItem('lastSelection');
+        if (!stored) return null;
+        
+        const data = JSON.parse(stored);
+        
+        // Check if data is less than 1 hour old
+        if (Date.now() - data.timestamp > 3600000) {
+            return null;
+        }
+        
+        return { year: data.year, month: data.month };
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Restore last selection on page load
+ */
+function restoreLastSelection() {
+    const lastSelection = getLastSelection();
+    
+    if (lastSelection) {
+        const yearSelect = document.getElementById('yearSelect');
+        const monthSelect = document.getElementById('monthSelect');
+        
+        // Set year
+        yearSelect.value = lastSelection.year;
+        selectedYear = lastSelection.year;
+        
+        // Enable and set month
+        monthSelect.disabled = false;
+        monthSelect.style.opacity = '1';
+        monthSelect.style.cursor = 'pointer';
+        monthSelect.value = lastSelection.month;
+        selectedMonth = lastSelection.month;
+        
+        // Load the data
+        setTimeout(() => {
+            let sheetName;
+            if (selectedMonth === 'Informasi_Umum') {
+                sheetName = 'Informasi_Umum';
+            } else {
+                sheetName = `${selectedMonth}_${selectedYear}`;
+            }
+            loadMonthData(sheetName);
+        }, 1000);
+    }
 }
 
 loadMonthData(selectedMonth, true);
 }
+
 function handleDelete(rowIndex) {
 if (!confirm('⚠️ Yakin ingin menghapus data ini?\n\nData yang dihapus tidak dapat dikembalikan!')) {
 return;
@@ -1411,15 +1576,23 @@ closeModal();
 }
 // ============ INITIALIZATION ============
 window.addEventListener('DOMContentLoaded', () => {
-console.log('Page loaded, waiting for Google APIs...');
-setTimeout(() => {
-    if (typeof gapi !== 'undefined') {
-        gapiLoaded();
-    }
-    if (typeof google !== 'undefined') {
-        gisLoaded();
-    }
-}, 500);
+    console.log('Page loaded, waiting for Google APIs...');
+    
+    // Initialize Google APIs
+    setTimeout(() => {
+        if (typeof gapi !== 'undefined') {
+            gapiLoaded();
+        }
+        if (typeof google !== 'undefined') {
+            gisLoaded();
+        }
+    }, 500);
+
+    // Restore last selection if available
+    setTimeout(() => {
+        restoreLastSelection();
+    }, 1000);
+});
 
 const currentMonth = new Date().toLocaleString('id-ID', { month: 'long' });
 const currentYear = new Date().getFullYear();
@@ -1442,3 +1615,4 @@ if (event.target === modal) {
 closeModal();
 }
 }
+
