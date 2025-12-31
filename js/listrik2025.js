@@ -87,10 +87,6 @@ activityEvents.forEach(event => {
     document.addEventListener(event, resetInactivityTimer, true);
 });
 
-window.addEventListener('DOMContentLoaded', () => {
-    startInactivityTimer();
-});
-
 function updateUIBasedOnRole(role) {
     const authBtn = document.getElementById('authBtn');
     const isAdmin = role && role.toLowerCase() === 'admin';
@@ -1514,9 +1510,6 @@ function restoreLastSelection() {
     }
 }
 
-loadMonthData(selectedMonth, true);
-}
-
 function handleDelete(rowIndex) {
 if (!confirm('⚠️ Yakin ingin menghapus data ini?\n\nData yang dihapus tidak dapat dikembalikan!')) {
 return;
@@ -1574,6 +1567,7 @@ if (editRowIndex) {
 
 closeModal();
 }
+
 // ============ INITIALIZATION ============
 window.addEventListener('DOMContentLoaded', () => {
     console.log('Page loaded, waiting for Google APIs...');
@@ -1594,25 +1588,19 @@ window.addEventListener('DOMContentLoaded', () => {
     }, 1000);
 });
 
-const currentMonth = new Date().toLocaleString('id-ID', { month: 'long' });
-const currentYear = new Date().getFullYear();
-const monthKey = `${currentMonth}_${currentYear}`;
-
-const lastMonth = getLastMonth();
-const monthSelect = document.getElementById('monthSelect');
-
-if (lastMonth) {
-    monthSelect.value = lastMonth;
-    setTimeout(() => loadMonthData(lastMonth), 1000);
-} else if (document.querySelector(`option[value="${monthKey}"]`)) {
-    monthSelect.value = monthKey;
-    setTimeout(() => loadMonthData(monthKey), 1000);
+// Modal click outside to close
+window.onclick = function(event) {
+    const modal = document.getElementById('dataModal');
+    if (event.target === modal) {
+        closeModal();
+    }
 }
-});
+
 window.onclick = function(event) {
 const modal = document.getElementById('dataModal');
 if (event.target === modal) {
 closeModal();
 }
 }
+
 
