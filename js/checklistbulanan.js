@@ -158,7 +158,7 @@ const CONFIG = {
         'FIVI - Indomaret Toko Anugrah Ketapang': '1HGEqDAeKLUzIEpLbP1t5Op_UcfCPCU1R',
         'FZ7Y - Indomaret Pemuda 28 Mataram': '1VQsrHH9WeBVbTUj9f9OKcuBcKWQLMUAh',
         '1SFY - Alfamart SPBU Mantang': '1CtVrHqICW2EeIGtbEtPmqCnpF7618FW9',
-        'Q789- Alfamart SPBU Dewi Anom Rendang': '1x2__YhRwjPXbEHaAPOrVO0lLUCxkVUEH'
+        'Q789 - Alfamart SPBU Dewi Anom Rendang': '1x2__YhRwjPXbEHaAPOrVO0lLUCxkVUEH'
     }
 };
 
