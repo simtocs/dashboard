@@ -331,6 +331,14 @@ function parseNumber(value) {
     return isNaN(num) ? 0 : num;
 }
 
+function getYearRowOffset(year = appState.currentYear) {
+    const offsets = {
+        '2025': 0,
+        '2026': 26
+    };
+    return offsets[year] ?? 0;
+}
+
 function showLoading(message = 'Memuat data...') {
     document.getElementById('content').innerHTML = `
         <div class="loading">
@@ -738,8 +746,8 @@ function displayData(values1, values2, sheetName) {
         const originalIndex = allDataRows1.findIndex(r => 
             r[0] === row[0] && r[1] === row[1] && r[2] === row[2]
         );
-        const rowIndex = originalIndex + 2;
-
+        const yearOffset = getYearRowOffset();
+        const rowIndex = originalIndex + 2 + yearOffset;
         html += `
             <tr>
                 <td class="triwulan">${data.triwulan}</td>
@@ -802,8 +810,9 @@ function displayData(values1, values2, sheetName) {
     `;
     
     dataRows2.forEach((row, index) => {
-        const data = processRowDataTable2(row);
-        const rowIndex = index + 2;
+      const data = processRowDataTable2(row);
+      const yearOffset = getYearRowOffset();
+      const rowIndex = index + 2 + yearOffset;
 
         html += `
             <tr>
@@ -897,8 +906,7 @@ function openEditModal(rowIndex, tableNumber) {
         document.getElementById('submitBtnText').textContent = 'Update';
         
         // Set row index with year offset
-        const yearOffset = appState.currentYear === '2026' ? 26 : 0;
-        document.getElementById('editRowIndex').value = rowIndex + yearOffset;
+        document.getElementById('editRowIndex').value = rowIndex;
         document.getElementById('editTableNumber').value = tableNumber;
         
         // Show/hide appropriate field sections
@@ -942,8 +950,7 @@ function openEditModal(rowIndex, tableNumber) {
         document.getElementById('submitBtnText').textContent = 'Update';
         
         // Set row index with year offset
-        const yearOffset = appState.currentYear === '2026' ? 26 : 0;
-        document.getElementById('editRowIndex').value = rowIndex + yearOffset;
+        document.getElementById('editRowIndex').value = rowIndex;
         document.getElementById('editTableNumber').value = tableNumber;
         
         // Show/hide appropriate field sections
@@ -2101,8 +2108,7 @@ function handleDelete(rowIndex, tableNumber) {
     if (!confirm('⚠️ Yakin ingin menghapus data ini?\n\nData yang dihapus tidak dapat dikembalikan!')) {
         return;
     }
-    const yearOffset = appState.currentYear === '2026' ? 26 : 0;
-    deleteRow(appState.currentSheet, rowIndex + yearOffset, tableNumber);  // ← ADD yearOffset here!
+    deleteRow(appState.currentSheet, rowIndex, tableNumber);
 }
 
 async function handleFormSubmit(event) {
@@ -2780,6 +2786,7 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
 
 
 
