@@ -609,9 +609,10 @@ function handleTriwulanFilter() {
 function handleYearChange() {
     const yearSelect = document.getElementById('yearFilter');
     const selectedYear = yearSelect.value;
+
+    const previousYear = appState.currentYear;
     appState.currentYear = selectedYear;
 
-    // Reset triwulan filter when changing year
     appState.currentFilter = 'all';
     const triwulanSelect = document.getElementById('triwulanFilter');
     if (triwulanSelect) {
@@ -621,8 +622,11 @@ function handleYearChange() {
 
     // Reload data with new year
     if (appState.currentSheet) {
-        // Clear cache for current sheet
-        delete appState.cache[appState.currentSheet];
+        Object.keys(appState.cache).forEach(key => {
+            if (key.startsWith(`${appState.currentSheet}_`)) {
+                delete appState.cache[key];
+            }
+        });
         loadSheetData(appState.currentSheet, true);
     }
 }
@@ -2786,6 +2790,7 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
 
 
 
