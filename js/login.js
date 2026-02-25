@@ -5,6 +5,14 @@ var CONFIG = {
     SHEET_NAME: 'Users'
 };
 
+async function hashPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 console.log('Login.js loaded');
 
 // COOKIE FUNCTIONS
@@ -69,12 +77,13 @@ function setLoading(isLoading) {
 }
 
 // LOGIN HANDLER
-function handleLogin(event) {
+async function handleLogin(event) {
     event.preventDefault();
     console.log('Login started');
     
     var username = document.getElementById('username').value.trim();
-    var password = document.getElementById('password').value;
+    var password = document.getElementById('password').value.trim();
+    var hashedPassword = await hashPassword(password);
     
     if (!username || !password) {
         showMessage('Username dan password harus diisi!', 'error');
@@ -116,7 +125,7 @@ function handleLogin(event) {
             
             for (var i = 0; i < users.length; i++) {
                 var user = users[i];
-                if (user[0] && user[0].trim().toLowerCase() === username.toLowerCase() && user[1] && user[1].trim() === password) {
+                if (user[0] && user[0].trim().toLowerCase() === username.toLowerCase() && user[1] && user[1].trim() === hashedPassword) {
                     validUser = user;
                     break;
                 }
@@ -233,3 +242,4 @@ document.addEventListener('keydown', function(e) {
         document.getElementById('username').focus();
     }
 });
+
