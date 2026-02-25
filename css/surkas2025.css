@@ -806,6 +806,28 @@ tbody tr:hover {
     gap: 8px;
 }
 
+.print-btn {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(108, 117, 125, 0.3);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.print-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+}
+    
 .compare-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(156, 39, 176, 0.4);
@@ -1113,6 +1135,7 @@ td.center {
     }
 }
 }
+
 
 
 
