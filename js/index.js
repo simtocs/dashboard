@@ -528,13 +528,13 @@ function formatAnnouncementDate(isoDate) {
 }
 
 async function displayAnnouncements() {
+    if (sessionStorage.getItem('announcementsClosed') === 'true') return;
     const listContainer = document.getElementById('announcementsList');
     const board = document.getElementById('announcementBoard');
     const announcements = await loadAnnouncements();
     
     if (listContainer) listContainer.innerHTML = '';
 
-    // Always show the board (don't hide it)
     if (board) board.style.display = 'block';
 
     // Check if admin is authenticated for showing edit/delete buttons
@@ -720,5 +720,6 @@ window.addEventListener('click', function(event) {
         closeAnnouncementModal();
     }
 });
+
 
 
