@@ -257,7 +257,6 @@ async function maybeEnableButtons() {
     if (gapiInited && gisInited) {
         console.log('✅ Both Google APIs ready');
         restoreOAuthToken();
-        await displayAnnouncements()
         if (currentUserRole && currentUserRole.toLowerCase() === 'admin') {
             updateUIBasedOnRole(currentUserRole);
         }
@@ -593,9 +592,9 @@ function openAnnouncementModal(mode, rowIndex = null) {
         return;
     }
     
-    if (mode !== 'add' && !accessToken) {
-        alert('❌ Harap otentikasi GS API terlebih dahulu!');
-        return;
+    if (!accessToken) {
+    alert('❌ Harap otentikasi GS API terlebih dahulu!');
+    return;
     }
 
     const modal = document.getElementById('announcementModal');
@@ -614,12 +613,11 @@ function openAnnouncementModal(mode, rowIndex = null) {
         const dateInput = document.getElementById('date');
         if (dateInput) dateInput.value = today;
     } else if (mode === 'edit' && rowIndex !== null) {
-        if (announcementData.length < rowIndex) {
+        if (announcementData.length <= rowIndex) {
             alert('❌ Data pengumuman tidak ditemukan!');
             return;
         }
-        const row = announcementData[rowIndex - 1];
-        
+               
         if (modalTitle) modalTitle.textContent = 'Edit Pengumuman';
         if (submitBtnText) submitBtnText.textContent = 'Update';
         if (editRowIndexInput) editRowIndexInput.value = rowIndex;
@@ -716,3 +714,4 @@ window.addEventListener('click', function(event) {
         closeAnnouncementModal();
     }
 });
+
