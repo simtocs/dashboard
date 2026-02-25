@@ -149,12 +149,12 @@ async function handleLogin(event) {
                 var redirectParam = urlParams.get('redirect');
                 var redirectTo;
                 
-                if (redirectParam) {
-                    redirectTo = redirectParam;
+                if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
+                redirectTo = redirectParam;
                 } else if (window.location.hostname === 'simtocs.github.io') {
-                    redirectTo = '/dashboard/index.html';
+                redirectTo = '/dashboard/index.html';
                 } else {
-                    redirectTo = 'index.html';
+                redirectTo = 'index.html';
                 }
                 
                 console.log('Redirect ke:', redirectTo);
@@ -191,12 +191,12 @@ window.addEventListener('DOMContentLoaded', function() {
                 var redirectParam = urlParams.get('redirect');
                 var redirectTo;
                 
-                if (redirectParam) {
-                    redirectTo = redirectParam;
+                if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
+                redirectTo = redirectParam;
                 } else if (window.location.hostname === 'simtocs.github.io') {
-                    redirectTo = '/dashboard/index.html';
+                redirectTo = '/dashboard/index.html';
                 } else {
-                    redirectTo = 'index.html';
+                redirectTo = 'index.html';
                 }
                 
                 window.location.href = redirectTo;
@@ -233,5 +233,6 @@ document.addEventListener('keydown', function(e) {
         document.getElementById('username').focus();
     }
 });
+
 
 
