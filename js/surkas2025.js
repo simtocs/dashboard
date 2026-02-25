@@ -1211,6 +1211,124 @@ async function generatePrintReport() {
     }
 }
 
+// ============ COMPARISON PRINT FUNCTION ============
+async function generateComparisonPrint() {
+    // Retrieve the last comparison data saved by displayComparisonResults
+    let comparisonData;
+    try {
+        const stored = sessionStorage.getItem('lastComparisonData');
+        if (!stored) {
+            alert('⚠️ Tidak ada data perbandingan untuk dicetak. Silakan jalankan perbandingan terlebih dahulu.');
+            return;
+        }
+        comparisonData = JSON.parse(stored);
+        const ageMinutes = (Date.now() - comparisonData.timestamp) / 60000;
+        if (ageMinutes > 10) {
+        const proceed = confirm(`⚠️ Data perbandingan sudah ${Math.floor(ageMinutes)} menit yang lalu. Tetap cetak?`);
+        if (!proceed) return;
+        }
+    } catch (e) {
+        alert('❌ Gagal membaca data perbandingan: ' + e.message);
+        return;
+    }
+
+    const { storeData, triwulanFilter } = comparisonData;
+
+    // Show loading indicator
+    const loadingDiv = document.createElement('div');
+    loadingDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); z-index: 10000; text-align: center;';
+    loadingDiv.innerHTML = '<div class="loading-spinner" style="margin: 0 auto 20px;"></div><div style="color: #FF69B4; font-weight: 600;">Menyiapkan laporan perbandingan...</div>';
+    document.body.appendChild(loadingDiv);
+
+    try {
+        const currentDate = new Date().toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        // Build the full print HTML
+        const comparisonSection = generateComparisonPrintSection(storeData, triwulanFilter);
+
+        const printHTML = `
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Perbandingan Toko - ${appState.currentYear}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; color: #333; }
+        .header-section { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #FF69B4; }
+        .header-section h1 { font-size: 20pt; color: #FF69B4; margin-bottom: 10px; }
+        .meta-info { display: flex; justify-content: center; gap: 40px; margin-top: 10px; font-size: 10pt; color: #666; }
+        .section-title { font-size: 13pt; font-weight: bold; color: #FF69B4; margin: 20px 0 15px 0; padding: 8px 15px; background: #fff5f9; border-left: 4px solid #FF69B4; border-radius: 3px; }
+        .comparison-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+        .comparison-summary-card { background: linear-gradient(135deg, #FF69B4, #4A90E2); color: white; padding: 15px; border-radius: 8px; text-align: center; }
+        .comparison-summary-card .icon { font-size: 1.8em; margin-bottom: 8px; }
+        .comparison-summary-card .label { font-size: 8pt; opacity: 0.9; margin-bottom: 5px; }
+        .comparison-summary-card .value { font-size: 11pt; font-weight: bold; }
+        .comparison-summary-card .amount { font-size: 10pt; margin-top: 4px; }
+        .comparison-summary-card .amount.positive { color: #d4edda; }
+        .comparison-summary-card .amount.negative { color: #f8d7da; }
+        .data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 8pt; }
+        .data-table th { background: linear-gradient(to right, #FF69B4, #4A90E2); color: white; padding: 8px 6px; text-align: center; font-weight: bold; border: 1px solid #ddd; }
+        .data-table td { padding: 6px; border: 1px solid #ddd; }
+        .data-table td.right { text-align: right; }
+        .data-table td.center { text-align: center; }
+        .data-table .positive { color: #28a745; font-weight: bold; }
+        .data-table .negative { color: #dc3545; font-weight: bold; }
+        .data-table .zero { color: #6c757d; }
+        .data-table tr:nth-child(even) { background: #f8f9fa; }
+        .grand-total { background: #f8f9fa !important; font-weight: 700; border-top: 3px solid #FF69B4; }
+        .comparison-section { margin-top: 20px; }
+        .page-break { page-break-before: always; }
+        .footer-notes { font-size: 8pt; color: #666; text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #e9ecef; }
+        @media print {
+            body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-section">
+        <h1>📊 LAPORAN PERBANDINGAN TOKO</h1>
+        <div class="meta-info">
+            <div>Tahun: ${appState.currentYear}</div>
+            <div>Tanggal Cetak: ${currentDate}</div>
+            <div>Jumlah Toko: ${storeData.length}</div>
+        </div>
+    </div>
+
+    ${comparisonSection}
+
+    <div class="footer-notes">
+        Dokumen ini dicetak secara otomatis dari SIMTOCS - Sistem Informasi Manajemen Toko Carang Sari<br>
+        Dicetak pada: ${currentDate}
+    </div>
+</body>
+</html>`;
+
+        document.body.removeChild(loadingDiv);
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(printHTML);
+            printWindow.document.close();
+            printWindow.onload = function() {
+                setTimeout(() => printWindow.print(), 800);
+            };
+        } else {
+            alert('❌ Tidak dapat membuka window print. Pastikan popup tidak diblokir.');
+        }
+
+    } catch (error) {
+        console.error('Error generating comparison print:', error);
+        document.body.removeChild(loadingDiv);
+        alert('❌ Terjadi kesalahan saat membuat laporan: ' + error.message);
+    }
+}
+
 async function generateChartImages(dataRows, totals) {
     const chartImages = {};
     
@@ -2425,9 +2543,9 @@ function displayComparisonResults(storeData, selectedTriwulan) {
                 Filter: ${triwulanLabel}
             </div>
         </div>
-        <button class="print-btn" onclick="generatePrintReport()" style="display: inline-flex;">
-            <span>🖨️</span>
-            <span>Cetak Laporan Lengkap</span>
+        <button class="print-btn" onclick="generateComparisonPrint()" style="display: inline-flex;">
+        <span>🖨️</span>
+        <span>Cetak Laporan Perbandingan</span>
         </button>
     </div>
         
@@ -2796,6 +2914,7 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
 
 
 
