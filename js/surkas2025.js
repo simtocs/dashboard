@@ -814,9 +814,13 @@ function displayData(values1, values2, sheetName) {
     `;
     
     dataRows2.forEach((row, index) => {
-      const data = processRowDataTable2(row);
-      const yearOffset = getYearRowOffset();
-      const rowIndex = index + 2 + yearOffset;
+    const data = processRowDataTable2(row);
+    const originalIndex = allDataRows2.findIndex(r =>
+        r[0] === row[0] && r[1] === row[1] && r[2] === row[2] && r[3] === row[3]
+    );
+    if (originalIndex === -1) return;
+    const yearOffset = getYearRowOffset();
+    const rowIndex = originalIndex + 2 + yearOffset;
 
         html += `
             <tr>
@@ -902,7 +906,8 @@ function openEditModal(rowIndex, tableNumber) {
         }
 
         // Get row data
-        const row = appState.currentData[rowIndex - 1];
+        const yearOffset = getYearRowOffset();
+        const row = appState.currentData[rowIndex - yearOffset - 1];
         const data = processRowData(row);
 
         // Set modal title and mode
@@ -946,7 +951,8 @@ function openEditModal(rowIndex, tableNumber) {
         }
 
         // Get row data
-        const row = appState.currentData2[rowIndex - 1];
+        const yearOffset = getYearRowOffset();
+        const row = appState.currentData2[rowIndex - yearOffset - 1];
         const data = processRowDataTable2(row);
 
         // Set modal title and mode
@@ -2790,6 +2796,7 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
 
 
 
