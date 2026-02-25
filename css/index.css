@@ -647,8 +647,8 @@ body::before {
 
 .announcement-form-group input:focus, .announcement-form-group textarea:focus, .announcement-form-group select:focus {
     outline: none;
-    border-color: #00BBFF;
-    box-shadow: 0 0 0 3px rgba(255, 165, 0, 0.2);
+    border-color: #FF69B4;
+    box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.2);
 }
 
 .form-actions {
@@ -786,3 +786,4 @@ body::before {
     .announcement-item { flex-direction: column; align-items: flex-start; }
     .announcement-actions { margin-top: 10px; }
 }
+
