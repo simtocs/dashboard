@@ -225,15 +225,6 @@ window.addEventListener('DOMContentLoaded', function() {
     if (toggleBtn) {
         toggleBtn.addEventListener('click', togglePassword);
     }
-
-    var passwordField = document.getElementById('password');
-    if (passwordField) {
-        passwordField.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                handleLogin(e);
-            }
-        });
-    }
 });
 
 document.addEventListener('keydown', function(e) {
@@ -242,4 +233,5 @@ document.addEventListener('keydown', function(e) {
         document.getElementById('username').focus();
     }
 });
+
 
