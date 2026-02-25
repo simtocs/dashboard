@@ -12,6 +12,8 @@ let tokenClient;
 let accessToken = null;
 let gapiInited = false;
 let gisInited = false;
+let gapiLoading = false;
+let gisLoading = false;
 let announcementData = [];
 let currentUserRole = null;
 
@@ -152,7 +154,7 @@ function resetInactivityTimer() {
     startInactivityTimer();
 }
 
-const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'visibilitychange'];
+const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
 activityEvents.forEach(event => {
     window.addEventListener(event, resetInactivityTimer);
 });
@@ -162,7 +164,7 @@ function storeOAuthToken(token, expiresIn) {
     try {
         const expiryTime = Date.now() + (expiresIn * 1000);
         localStorage.setItem('oauth_token', token);
-        localStorage.setItem('oauth_expiry', expiryTime);
+        localStorage.setItem('oauth_expiry', expiryTime.toString());
         accessToken = token;
     } catch (e) {
         console.warn('Could not save token to localStorage:', e);
@@ -174,7 +176,7 @@ function restoreOAuthToken() {
         const token = localStorage.getItem('oauth_token');
         const expiry = localStorage.getItem('oauth_expiry');
 
-        if (token && expiry && Date.now() < parseInt(expiry)) {
+        if (token && expiry && Date.now() < Number(expiry)) {
             accessToken = token;
             if (typeof gapi !== 'undefined' && gapi.client) {
                 gapi.client.setToken({ access_token: accessToken });
@@ -274,13 +276,15 @@ function waitForGoogleAPIs() {
         attempts++;
         
         // Check if gapi is available
-        if (typeof gapi !== 'undefined' && !gapiInited) {
-            gapiLoaded();
+        if (typeof gapi !== 'undefined' && !gapiInited && !gapiLoading) {
+        gapiLoading = true;
+        gapiLoaded();
         }
-        
+
         // Check if google.accounts is available
-        if (typeof google !== 'undefined' && typeof google.accounts !== 'undefined' && !gisInited) {
-            gisLoaded();
+        if (typeof google !== 'undefined' && typeof google.accounts !== 'undefined' && !gisInited && !gisLoading) {
+        gisLoading = true;
+        gisLoaded();
         }
         
         // Stop checking if both are initialized or max attempts reached
@@ -617,7 +621,9 @@ function openAnnouncementModal(mode, rowIndex = null) {
             alert('❌ Data pengumuman tidak ditemukan!');
             return;
         }
-               
+        
+        const row = announcementData[rowIndex - 1];     
+        
         if (modalTitle) modalTitle.textContent = 'Edit Pengumuman';
         if (submitBtnText) submitBtnText.textContent = 'Update';
         if (editRowIndexInput) editRowIndexInput.value = rowIndex;
@@ -714,4 +720,5 @@ window.addEventListener('click', function(event) {
         closeAnnouncementModal();
     }
 });
+
 
