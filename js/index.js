@@ -721,10 +721,13 @@ window.addEventListener('click', function(event) {
     }
 });
 
-function showDevMessage() {
-    console.log("SOP menu clicked"); // Untuk debugging di inspect element
-    alert("Mohon Maaf 🙏\n\nHalaman Standard Operating Procedure (SOP) sedang dalam tahap development. Silakan cek kembali nanti!");
-}
-
-
-
+document.addEventListener('DOMContentLoaded', function() {
+    const sopMenu = document.querySelector('.menu-card:last-child'); // Mengambil kartu terakhir (SOP)
+    
+    if (sopMenu) {
+        sopMenu.addEventListener('click', function(e) {
+            e.preventDefault();
+            alert("Mohon Maaf 🙏\n\nHalaman Standard Operating Procedure (SOP) sedang dalam tahap development.");
+        });
+    }
+});
