@@ -351,6 +351,11 @@ function handleAuth() {
 }
 
 // ============ GOOGLE SHEETS CRUD FUNCTIONS ============
+
+function showDevMessage() {
+    alert("Mohon Maaf 🙏\n\nHalaman Standard Operating Procedure (SOP) sedang dalam tahap development. Silakan cek kembali nanti!");
+}
+
 async function addRow(rowData) {
     if (!accessToken) {
         alert('❌ Harap otentikasi terlebih dahulu!\n\nKlik tombol "Otentikasi" di pojok kanan atas.');
@@ -720,6 +725,7 @@ window.addEventListener('click', function(event) {
         closeAnnouncementModal();
     }
 });
+
 
 
 
