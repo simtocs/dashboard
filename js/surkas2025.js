@@ -901,8 +901,8 @@ function openEditModal(rowIndex, tableNumber) {
     if (tableNumber === 1) {
         // Validate data exists
         const yearOffset = getYearRowOffset();
-        const arrayIndex = rowIndex - yearOffset - 2;
-        if (!appState.currentData || arrayIndex < 0 || arrayIndex >= appState.currentData.length) {
+        const arrayIndex = rowIndex - yearOffset - 1;
+        if (!appState.currentData || arrayIndex < 1 || arrayIndex >= appState.currentData.length){
             alert('Data tidak ditemukan!');
             return;
         }
@@ -947,8 +947,8 @@ function openEditModal(rowIndex, tableNumber) {
     } else if (tableNumber === 2) {
         // Validate data exists
         const yearOffset = getYearRowOffset();
-        const arrayIndex = rowIndex - yearOffset - 2;
-        if (!appState.currentData2 || arrayIndex < 0 || arrayIndex >= appState.currentData2.length) {
+        const arrayIndex = rowIndex - yearOffset - 1;
+        if (!appState.currentData2 || arrayIndex < 1 || arrayIndex >= appState.currentData2.length){
             alert('Data tidak ditemukan!');
             return;
         }
@@ -2916,3 +2916,4 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
