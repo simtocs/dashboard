@@ -1,4 +1,4 @@
-  // ============ CONFIG ============
+// ============ CONFIG ============
 const CONFIG = {
     CLIENT_ID: '874016971039-g91m2mt64mid7sh9vkk14vpjmpbc095o.apps.googleusercontent.com',
     API_KEY: 'AIzaSyCMpk-2HdASd6oX-MBRqehgXX-kTfzpFw0',
@@ -6,6 +6,20 @@ const CONFIG = {
     SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
     CACHE_DURATION: 5 * 60 * 1000,
     
+    // ============ PDF REPORT FOLDERS ============
+    // Google Drive folder IDs for each store's pre-generated PDF reports
+    // Parent folder: "Surplus Kas Reports" (Anyone with link can view)
+    SURKAS_PDF_FOLDERS: {
+        'F4SD': '1YVn__eH2Cdx2UESGFftygh64TqhJ-Rhx',
+        'FKOM': '1Jqu9LGQ13rJOC7GYGYpVXZq1iv231bdE',
+        'FHEN': '1Aj2rMvNyixgcr3lsSuVLR68W7Kcst6Mp',
+        'FEHU': '1sIleHvUJ1cX-3hrD8V1EsA1Nc3Be5pXJ',
+        'FIVI': '1OgMjpVyJycD3Dvm9yFj-sL3zaxWOY24z',
+        'FZ7Y': '1zrT2uH7g7b8zTVmQlslZG-Xbk8DZj22V',
+        '1SFY': '1kFzBD0lv5gtT35rGZUHMqHzR7PKJ8G_b',
+        'Q789': '1oL5n-dJwZei4jbJdJgN-bPwc2Qoi-dB4'
+    },
+
     // ✨ NEW: Year-based range configuration
     YEAR_RANGES: {
         '2025': {
@@ -653,6 +667,131 @@ function getTriwulanLabel(value) {
     return labels[value] || 'Semua Triwulan';
 }
 
+// ============ PDF REPORT FUNCTIONS ============
+
+/**
+ * Extracts the store code (e.g. "F4SD") from a full sheet name
+ * e.g. "F4SD - Indomaret SPBU Teras Ayung" → "F4SD"
+ */
+function getStoreCode(sheetName) {
+    if (!sheetName) return null;
+    const match = sheetName.trim().match(/^([A-Z0-9]+)/);
+    return match ? match[1] : null;
+}
+
+/**
+ * Constructs the expected PDF filename for a given month row
+ * e.g. storeCode="F4SD", bulan="NOVEMBER (2024)" → "F4SD_November_2024.pdf"
+ * e.g. storeCode="F4SD", bulan="JANUARI" (year from appState) → "F4SD_Januari_2025.pdf"
+ */
+function getPDFFileName(storeCode, bulan) {
+    if (!storeCode || !bulan) return null;
+
+    // Normalize month string — could be "NOVEMBER (2024)" or just "JANUARI"
+    const yearInMonth = bulan.match(/\((\d{4})\)/);
+    const year = yearInMonth ? yearInMonth[1] : appState.currentYear;
+
+    // Strip year annotation from month name and title-case it
+    const cleanMonth = bulan
+        .replace(/\s*\(\d{4}\)\s*/, '')
+        .trim()
+        .toLowerCase()
+        .replace(/^\w/, c => c.toUpperCase());
+
+    return `${storeCode}_${cleanMonth}_${year}.pdf`;
+}
+
+/**
+ * Searches for a file by name inside a specific Google Drive folder
+ * Uses API key only (no OAuth needed — folder is publicly shared)
+ * Returns the file ID if found, or null
+ */
+async function searchPDFInDrive(folderId, fileName) {
+    const query = encodeURIComponent(`name='${fileName}' and '${folderId}' in parents and trashed=false`);
+    const url = `https://www.googleapis.com/drive/v3/files?q=${query}&key=${CONFIG.API_KEY}&fields=files(id,name)`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.error) {
+            console.error('Drive search error:', data.error.message);
+            return null;
+        }
+
+        if (data.files && data.files.length > 0) {
+            return data.files[0].id;
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Drive search fetch error:', error);
+        return null;
+    }
+}
+
+/**
+ * Main handler — triggered when user clicks the download button on a row
+ * Finds the correct PDF in Drive and triggers a browser download
+ */
+async function downloadSurkasReport(bulan, buttonEl) {
+    const storeCode = getStoreCode(appState.currentSheet);
+
+    if (!storeCode) {
+        alert('❌ Tidak dapat menentukan kode toko.');
+        return;
+    }
+
+    const folderId = CONFIG.SURKAS_PDF_FOLDERS[storeCode];
+    if (!folderId) {
+        alert(`❌ Folder laporan untuk toko ${storeCode} belum dikonfigurasi.`);
+        return;
+    }
+
+    const fileName = getPDFFileName(storeCode, bulan);
+    if (!fileName) {
+        alert('❌ Tidak dapat menentukan nama file.');
+        return;
+    }
+
+    // Show loading state on button
+    const originalHTML = buttonEl.innerHTML;
+    buttonEl.disabled = true;
+    buttonEl.innerHTML = '⏳';
+
+    try {
+        const fileId = await searchPDFInDrive(folderId, fileName);
+
+        if (!fileId) {
+            alert(`⚠️ File tidak ditemukan di Google Drive.\n\nDicari: ${fileName}\n\nPastikan file sudah diupload ke folder ${storeCode}.`);
+            return;
+        }
+
+        // Trigger download via Google Drive direct download link
+        const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        const anchor = document.createElement('a');
+        anchor.href = downloadUrl;
+        anchor.download = fileName;
+        anchor.style.display = 'none';
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+
+        // Brief success state
+        buttonEl.innerHTML = '✅';
+        setTimeout(() => {
+            buttonEl.innerHTML = originalHTML;
+            buttonEl.disabled = false;
+        }, 2000);
+
+    } catch (error) {
+        console.error('Download error:', error);
+        alert('❌ Gagal mengunduh laporan: ' + error.message);
+        buttonEl.innerHTML = originalHTML;
+        buttonEl.disabled = false;
+    }
+}
+
 // ============ DISPLAY FUNCTIONS ============
 function displayData(values1, values2, sheetName) {
     const headers1 = values1[0];
@@ -735,6 +874,7 @@ function displayData(values1, values2, sheetName) {
                     <th>LABA NET DITRANSFER</th>
                     <th>BAYAR LISTRIK</th>
                     <th>SISA SURKAS</th>
+                    <th>LAPORAN</th>
                     ${accessToken ? '<th>AKSI</th>' : ''}
                 </tr>
             </thead>
@@ -761,6 +901,14 @@ function displayData(values1, values2, sheetName) {
                 <td class="currency">${formatRupiah(data.labaNetDitransfer)}</td>
                 <td class="currency">${formatRupiah(data.bayarListrik)}</td>
                 <td class="currency ${colorClass}">${formatRupiah(data.sisaSurkas)}</td>
+                <td class="actions">
+                    <button 
+                        class="btn-download-pdf" 
+                        onclick="downloadSurkasReport('${data.bulan}', this)"
+                        title="Unduh Laporan PDF - ${data.bulan}">
+                        📥 Unduh PDF
+                    </button>
+                </td>
                 ${accessToken ? `
                 <td class="actions">
                     <button class="btn-edit" onclick="openEditModal(${rowIndex}, 1)">✏️ Edit</button>
@@ -2916,4 +3064,3 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
-
