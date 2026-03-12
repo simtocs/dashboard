@@ -763,7 +763,7 @@ async function downloadSurkasReport(bulan, buttonEl) {
         const fileId = await searchPDFInDrive(folderId, fileName);
 
         if (!fileId) {
-            alert(`⚠️ File tidak ditemukan di Google Drive.\n\nDicari: ${fileName}\n\nPastikan file sudah diupload ke folder ${storeCode}.`);
+            alert(`⚠️ File tidak ditemukan di Database.\n\nDicari: ${fileName}\n\nSilakan hubungi administrator untuk informasi lebih lanjut.`);
             return;
         }
 
@@ -3064,3 +3064,4 @@ window.onclick = function(event) {
         closeComparisonModal();
     }
 }
+
