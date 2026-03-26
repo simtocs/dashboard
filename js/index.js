@@ -722,7 +722,8 @@ window.addEventListener('click', function(event) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
-    const sopMenu = document.querySelector('.menu-card:last-child'); // Mengambil kartu terakhir (SOP)
+    // Target the SOP menu specifically by its ID
+    const sopMenu = document.getElementById('sopMenu'); 
     
     if (sopMenu) {
         sopMenu.addEventListener('click', function(e) {
