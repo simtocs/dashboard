@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIMTOCS - Data Aktiva Toko</title>
+    <link rel="stylesheet" href="css/index.css">
+    <style>
+        .aktiva-container {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .controls-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .select-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            background: white;
+            font-size: 14px;
+        }
+        .aktiva-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .aktiva-table th {
+            background: linear-gradient(135deg, #FF69B4 0%, #4A90E2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        .aktiva-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            color: #333;
+        }
+        .category-header {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #4A90E2;
+        }
+    </style>
+</head>
+<body>
+    <div class="user-bar">
+        <div class="user-info">
+            <span>👤</span> <span id="displayUsername">Guest</span>
+        </div>
+        <button onclick="window.location.href='index.html'" class="auth-btn">
+            <span>🏠</span> Dashboard
+        </button>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🏢 Data Aktiva Toko</h1>
+            <p>Manajemen Aset Tetap & Inventaris Cabang Carang Sari</p>
+        </div>
+
+        <div class="aktiva-container">
+            <div class="controls-row">
+                <div class="select-group">
+                    <label>Pilih Toko:</label>
+                    <select id="storeSelect" onchange="loadAktivaData()">
+                        <option value="">-- Pilih Toko --</option>
+                        <option value="F4SD">F4SD - SPBU Teras Ayung</option>
+                        <option value="FKOM">FKOM - Komodo</option>
+                        <option value="FHEN">FHEN - Hasanuddin</option>
+                        <option value="FEHU">FEHU - Teuku Umar</option>
+                        <option value="FIVI">FIVI - Imam Bonjol</option>
+                        <option value="FZ7Y">FZ7Y - Sunset Road</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="aktivaContent">
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <span style="font-size: 48px;">📊</span>
+                    <h3>Silakan pilih toko untuk melihat daftar aktiva</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/index.js"></script>
+    <script>
+        // Logic to display data from your CSV/Spreadsheet
+        async function loadAktivaData() {
+            const store = document.getElementById('storeSelect').value;
+            if (!store) return;
+
+            const content = document.getElementById('aktivaContent');
+            content.innerHTML = '<div class="loading">Memuat data aktiva...</div>';
+
+            try {
+                // Here we call the same logic you use in index.js/surkas.js
+                // but targeting your Aktiva sheets/ranges
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: CONFIG.SPREADSHEET_ID,
+                    range: `${store}!A1:E100`, // Adjust range to fit your data
+                });
+
+                const values = response.result.values;
+                if (!values || values.length === 0) {
+                    content.innerHTML = '<p>Data tidak ditemukan.</p>';
+                    return;
+                }
+
+                let html = '<table class="aktiva-table"><thead><tr>';
+                html += '<th>No</th><th>Nama Item</th><th>Tanggal Beli</th><th>Jumlah</th><th>Biaya</th>';
+                html += '</tr></thead><tbody>';
+
+                // Skip header row and iterate
+                values.slice(1).forEach(row => {
+                    if (row.length === 1) { // It's a category header (e.g., "Peralatan Komputer")
+                        html += `<tr class="category-header"><td colspan="5">${row[0]}</td></tr>`;
+                    } else if (row.length > 1) {
+                        html += `<tr>
+                            <td>${row[0] || ''}</td>
+                            <td>${row[1] || ''}</td>
+                            <td>${row[2] || ''}</td>
+                            <td>${row[3] || ''}</td>
+                            <td>${formatRupiah(row[4])}</td>
+                        </tr>`;
+                    }
+                });
+
+                html += '</tbody></table>';
+                content.innerHTML = html;
+            } catch (err) {
+                content.innerHTML = `<p>Error: ${err.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
