@@ -343,13 +343,11 @@ function openAddModal() {
     document.getElementById('dataModal').classList.add('active');
 }
 
-// GANTI fungsi openEditModal yang ada dengan yang ini:
 function openEditModal(rowIndex) {
     if (!appState.currentData || appState.currentData.length < rowIndex) {
         alert('Data tidak ditemukan!');
         return;
     }
-    
     const row = appState.currentData[rowIndex - 1];
     const form = document.getElementById('dataForm');
 
@@ -363,26 +361,17 @@ function openEditModal(rowIndex) {
 
     document.getElementById('nomor').value = row[0] || '';
     document.getElementById('namaToko').value = row[1] || '';
-    document.getElementById('idPelanggan').value = row[2] || '';
+    
     document.getElementById('standAwal').value = parseNumber(row[3]);
     document.getElementById('standAkhir').value = parseNumber(row[4]);
     document.getElementById('biaya').value = parseNumber(row[6]);
 
     calculateUsage();
-
-    // Remove existing PLN preview if any
-    const existingPreview = document.getElementById('plnDataPreview');
-    if (existingPreview) existingPreview.remove();
-    
-    // Add Auto-Fill button if not exists
     addAutoFillButton();
-
     document.getElementById('dataModal').classList.add('active');
 }
 
-/**
- * Add Auto-Fill button to ID Pelanggan field
- */
+
 function addAutoFillButton() {
     const idPelangganGroup = document.querySelector('label[for="idPelanggan"]')?.parentElement;
     if (!idPelangganGroup) return;
@@ -777,6 +766,29 @@ async function loadMonthData(monthName, forceRefresh = false) {
     }
 }
 
+async function fetchIdPelangganMap() {
+    try {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent('Informasi_Umum')}?key=${CONFIG.API_KEY}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!data.values) return {};
+
+        const map = {};
+        data.values.slice(1).forEach(row => {
+            const namaToko = row[1]; // Column B
+            const idPelanggan = row[3]; // Column D
+            if (namaToko) {
+                map[namaToko] = idPelanggan ? idPelanggan.toString().trim() : '';
+            }
+        });
+        return map;
+    } catch (e) {
+        console.warn('Could not fetch ID Pelanggan map:', e);
+        return {}; 
+    }
+}
+
 // ============ DISPLAY FUNCTIONS ============
 function displayData(values, sheetName) {
     if (sheetName === 'Informasi_Umum') {
@@ -849,7 +861,7 @@ function displayData(values, sheetName) {
     dataRows.forEach((row, index) => {
         const nomor = row[0] || (index + 1);
         const namaToko = row[1] || '-';
-        const idPelanggan = row[2] ? row[2].toString().trim() : '';
+        const idPelanggan = appState.idPelangganMap ? appState.idPelangganMap[namaToko] : (row[2] || '');
         const standAwal = row[3] || '-';
         const standAkhir = row[4] || '-';
         const penggunaan = row[5] || '-';
@@ -1238,7 +1250,6 @@ document.getElementById('editRowIndex').value = rowIndex;
 
 document.getElementById('nomor').value = row[0] || '';
 document.getElementById('namaToko').value = row[1] || '';
-document.getElementById('idPelanggan').value = row[2] || '';
 document.getElementById('standAwal').value = parseNumber(row[3]);
 document.getElementById('standAkhir').value = parseNumber(row[4]);
 document.getElementById('biaya').value = parseNumber(row[6]);
@@ -1587,20 +1598,21 @@ return;
 }
 deleteRow(appState.currentMonth, rowIndex);
 }
+
 async function handleFormSubmit(event) {
-event.preventDefault();
-const nomor = document.getElementById('nomor').value;
-const namaToko = document.getElementById('namaToko').value;
-const idPelanggan = document.getElementById('idPelanggan').value;
-const editRowIndex = document.getElementById('editRowIndex').value;
+    event.preventDefault();
+    const nomor = document.getElementById('nomor').value;
+    const namaToko = document.getElementById('namaToko').value;
+    const editRowIndex = document.getElementById('editRowIndex').value;
 
-let rowData;
+    let rowData;
 
-if (appState.currentMonth === 'Informasi_Umum') {
-    let dayaListrik = '';
-    let alasNama = '';
-    
-    if (editRowIndex && appState.currentData[editRowIndex - 1]) {
+    if (appState.currentMonth === 'Informasi_Umum') {
+        let dayaListrik = '';
+    	let alasNama = '';
+    	const idPelanggan = document.getElementById('idPelanggan').value;
+    	
+		if (editRowIndex && appState.currentData[editRowIndex - 1]) {
         const existingRow = appState.currentData[editRowIndex - 1];
         dayaListrik = existingRow[2] || '';
         alasNama = existingRow[4] || '';
@@ -1613,36 +1625,40 @@ if (appState.currentMonth === 'Informasi_Umum') {
         idPelanggan,
         alasNama
     ];
-} else {
-    const standAwal = parseNumber(document.getElementById('standAwal').value);
-    const standAkhir = parseNumber(document.getElementById('standAkhir').value);
-    const penggunaan = parseNumber(document.getElementById('penggunaan').value);
-    const biaya = parseNumber(document.getElementById('biaya').value);
+    
+	} else {
+        const standAwal = parseNumber(document.getElementById('standAwal').value);
+        const standAkhir = parseNumber(document.getElementById('standAkhir').value);
+        const penggunaan = parseNumber(document.getElementById('penggunaan').value);
+        const biaya = parseNumber(document.getElementById('biaya').value);
+        
+        let dayaListrik = '';
+        let existingStatus = '';
+        
+        if (editRowIndex && appState.currentData[editRowIndex - 1]) {
+            const existingRow = appState.currentData[editRowIndex - 1];
+            dayaListrik = existingRow[2] || ''; // Column C is Daya Listrik
+            existingStatus = existingRow[7] || ''; // Column H is Status
+        }
 
-    // Preserve existing status when editing; default to empty for new rows
-    const existingStatus = (editRowIndex && appState.currentData[editRowIndex - 1])
-        ? (appState.currentData[editRowIndex - 1][7] || '')
-        : '';
+        rowData = [
+            nomor,
+            namaToko,
+            dayaListrik, 
+            standAwal,
+            standAkhir,
+            penggunaan,
+            biaya,
+            existingStatus
+        ];
+    }
 
-    rowData = [
-        nomor,
-        namaToko,
-        idPelanggan,
-        standAwal,
-        standAkhir,
-        penggunaan,
-        biaya,
-        existingStatus
-    ];
-}
-
-if (editRowIndex) {
-    await updateRow(appState.currentMonth, parseInt(editRowIndex), rowData);
-} else {
-    await addRow(appState.currentMonth, rowData);
-}
-
-closeModal();
+    if (editRowIndex) {
+        await updateRow(appState.currentMonth, parseInt(editRowIndex), rowData);
+    } else {
+        await addRow(appState.currentMonth, rowData);
+    }
+    closeModal();
 }
 
 // ============ INITIALIZATION ============
@@ -1664,14 +1680,6 @@ window.addEventListener('DOMContentLoaded', () => {
         restoreLastSelection();
     }, 1000);
 });
-
-// Modal click outside to close
-window.onclick = function(event) {
-    const modal = document.getElementById('dataModal');
-    if (event.target === modal) {
-        closeModal();
-    }
-}
 
 window.onclick = function(event) {
 const modal = document.getElementById('dataModal');
