@@ -851,17 +851,34 @@ function displayData(values, sheetName) {
         const standAkhir = row[4] || '-';
         const penggunaan = row[5] || '-';
         const biaya = row[6] || '-';
-
         const rowIndex = index + 2;
 
-        // Show "Cek Tagihan" button only when biaya is empty, '-', or zero
+        // Salin ID button: only when biaya is empty/zero AND ID exists
         const biayaNum = parseNumber(row[6]);
         const biayaIsEmpty = !row[6] || row[6].toString().trim() === '' || row[6].toString().trim() === '-' || biayaNum === 0;
-        const cekTagihanCell = biayaIsEmpty && idPelanggan
-            ? `<button class="btn-copy" onclick="handleCopyAndNavigate('${idPelanggan}', this)" data-copied="false">📋 Salin ID</button>`
+        const salinIdBtn = biayaIsEmpty && idPelanggan
+            ? `<button class="btn-copy" onclick="handleCopyAndNavigate('${idPelanggan}', this)" data-copied="false" style="margin-bottom:5px;width:100%;">📋 Salin ID</button>`
             : biayaIsEmpty && !idPelanggan
-                ? `<span style="color: #999; font-size: 12px;">Tidak ada ID</span>`
-                : `<span style="color: #28a745; font-size: 13px;">✓ Sudah dibayar</span>`;
+                ? `<span style="color:#999;font-size:12px;display:block;margin-bottom:5px;">Tidak ada ID</span>`
+                : '';
+
+        // Status from column H (index 7)
+        const status = (row[7] || '').toString().trim();
+        const isSudahDibayar = status === 'Sudah Dibayar';
+        const statusStyle = isSudahDibayar
+            ? 'background:#d4edda;color:#155724;border:1px solid #c3e6cb;'
+            : 'background:#fff3cd;color:#856404;border:1px solid #ffeeba;';
+
+        // Admin with token gets dropdown; others get read-only badge
+        const isAdmin = (() => { try { const a = getAuthData(); return a && a.role && a.role.toLowerCase() === 'admin'; } catch(e) { return false; } })();
+        const statusCell = (isAdmin && accessToken)
+            ? `<select class="status-select" onchange="updateStatus('${appState.currentMonth}', ${rowIndex}, this.value)" style="${statusStyle}padding:5px 8px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;width:100%;">
+                    <option value="Menunggu Pembayaran" ${!isSudahDibayar ? 'selected' : ''}>⏳ Menunggu Pembayaran</option>
+                    <option value="Sudah Dibayar" ${isSudahDibayar ? 'selected' : ''}>✅ Sudah Dibayar</option>
+                </select>`
+            : `<span style="${statusStyle}padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;display:inline-block;">
+                    ${isSudahDibayar ? '✅ Sudah Dibayar' : '⏳ Menunggu Pembayaran'}
+                </span>`;
 
         html += `
             <tr>
@@ -871,7 +888,10 @@ function displayData(values, sheetName) {
                 <td class="number">${formatNumber(standAkhir)}</td>
                 <td class="number">${formatNumber(penggunaan)}</td>
                 <td class="currency">${formatRupiah(biaya)}</td>
-                <td class="actions">${cekTagihanCell}</td>
+                <td class="actions" style="min-width:160px;">
+                    ${salinIdBtn}
+                    ${statusCell}
+                </td>
                 ${accessToken ? `
                 <td class="actions">
                     <button class="btn-edit" onclick="openEditModal(${rowIndex})">✏️ Edit</button>
@@ -1247,7 +1267,7 @@ return;
 try {
     const response = await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: CONFIG.SPREADSHEET_ID,
-        range: `${sheetName}!A:G`,
+        range: `${sheetName}!A:H`,
         valueInputOption: 'USER_ENTERED',
         resource: {
             values: [rowData]
@@ -1275,7 +1295,7 @@ return;
 try {
     const response = await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: CONFIG.SPREADSHEET_ID,
-        range: `${sheetName}!A${rowIndex}:G${rowIndex}`,
+        range: `${sheetName}!A${rowIndex}:H${rowIndex}`,
         valueInputOption: 'USER_ENTERED',
         resource: {
             values: [rowData]
@@ -1343,6 +1363,41 @@ try {
     alert('❌ Gagal menghapus baris: ' + error.message);
     throw error;
 }
+}
+
+
+// ============ STATUS UPDATE FUNCTION ============
+async function updateStatus(sheetName, rowIndex, newStatus) {
+    if (!accessToken) {
+        alert('❌ Harap authenticate terlebih dahulu!');
+        return;
+    }
+    try {
+        const response = await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: CONFIG.SPREADSHEET_ID,
+            range: `${sheetName}!H${rowIndex}`,
+            valueInputOption: 'USER_ENTERED',
+            resource: { values: [[newStatus]] }
+        });
+
+        // Update local data so badge refreshes without full reload
+        if (appState.currentData[rowIndex - 2] !== undefined) {
+            appState.currentData[rowIndex - 2][7] = newStatus;
+        }
+        delete appState.cache[sheetName];
+
+        showNotification(
+            newStatus === 'Sudah Dibayar'
+                ? '✅ Status: Sudah Dibayar'
+                : '⏳ Status: Menunggu Pembayaran',
+            'success'
+        );
+        return response;
+    } catch (error) {
+        console.error('Error updating status:', error);
+        alert('❌ Gagal memperbarui status: ' + error.message);
+        throw error;
+    }
 }
 
 // ============ EVENT HANDLERS ============
@@ -1561,6 +1616,11 @@ if (appState.currentMonth === 'Informasi_Umum') {
     const penggunaan = parseNumber(document.getElementById('penggunaan').value);
     const biaya = parseNumber(document.getElementById('biaya').value);
 
+    // Preserve existing status when editing; default to empty for new rows
+    const existingStatus = (editRowIndex && appState.currentData[editRowIndex - 1])
+        ? (appState.currentData[editRowIndex - 1][7] || '')
+        : '';
+
     rowData = [
         nomor,
         namaToko,
@@ -1568,7 +1628,8 @@ if (appState.currentMonth === 'Informasi_Umum') {
         standAwal,
         standAkhir,
         penggunaan,
-        biaya
+        biaya,
+        existingStatus
     ];
 }
 
