@@ -761,7 +761,10 @@ async function loadMonthData(monthName, forceRefresh = false) {
         setCachedData(monthName, data.values);
         appState.lastUpdate = new Date();
         appState.currentData = data.values;
-        
+
+		if (!appState.idPelangganMap) {
+    	appState.idPelangganMap = await fetchIdPelangganMap();
+		}
         displayData(data.values, monthName);
         
     } catch (error) {
