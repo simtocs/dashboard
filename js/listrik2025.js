@@ -846,7 +846,7 @@ function displayData(values, sheetName) {
     dataRows.forEach((row, index) => {
         const nomor = row[0] || (index + 1);
         const namaToko = row[1] || '-';
-        const idPelanggan = row[2] || '';
+        const idPelanggan = row[2] ? row[2].toString().trim() : '';
         const standAwal = row[3] || '-';
         const standAkhir = row[4] || '-';
         const penggunaan = row[5] || '-';
@@ -1005,7 +1005,7 @@ function displayInformasiUmum(values, sheetName) {
         const nomor = row[0] || (index + 1);
         const namaToko = row[1] || '-';
         const dayaListrik = row[2] ? formatNumber(row[2]) + ' W' : '-';
-        const idPelanggan = row[3] || '-';
+        const idPelanggan = row[3] ? row[3].toString().trim() : '-';
         const alasNama = row[4] || '-';
 
         const rowIndex = index + 2;
