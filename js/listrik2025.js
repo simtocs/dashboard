@@ -836,6 +836,7 @@ function displayData(values, sheetName) {
                         <th>Stand Akhir</th>
                         <th>Penggunaan (kWh)</th>
                         <th>Biaya Listrik</th>
+                        <th>Cek Tagihan</th>
                         ${accessToken ? '<th>AKSI</th>' : ''}
                     </tr>
                 </thead>
@@ -845,12 +846,22 @@ function displayData(values, sheetName) {
     dataRows.forEach((row, index) => {
         const nomor = row[0] || (index + 1);
         const namaToko = row[1] || '-';
+        const idPelanggan = row[2] || '';
         const standAwal = row[3] || '-';
         const standAkhir = row[4] || '-';
         const penggunaan = row[5] || '-';
         const biaya = row[6] || '-';
 
         const rowIndex = index + 2;
+
+        // Show "Cek Tagihan" button only when biaya is empty, '-', or zero
+        const biayaNum = parseNumber(row[6]);
+        const biayaIsEmpty = !row[6] || row[6].toString().trim() === '' || row[6].toString().trim() === '-' || biayaNum === 0;
+        const cekTagihanCell = biayaIsEmpty && idPelanggan
+            ? `<button class="btn-copy" onclick="handleCopyAndNavigate('${idPelanggan}', this)" data-copied="false">📋 Salin ID</button>`
+            : biayaIsEmpty && !idPelanggan
+                ? `<span style="color: #999; font-size: 12px;">Tidak ada ID</span>`
+                : `<span style="color: #28a745; font-size: 13px;">✓ Sudah dibayar</span>`;
 
         html += `
             <tr>
@@ -860,6 +871,7 @@ function displayData(values, sheetName) {
                 <td class="number">${formatNumber(standAkhir)}</td>
                 <td class="number">${formatNumber(penggunaan)}</td>
                 <td class="currency">${formatRupiah(biaya)}</td>
+                <td class="actions">${cekTagihanCell}</td>
                 ${accessToken ? `
                 <td class="actions">
                     <button class="btn-edit" onclick="openEditModal(${rowIndex})">✏️ Edit</button>
@@ -872,9 +884,10 @@ function displayData(values, sheetName) {
 
     html += `
                     <tr class="total-row">
-                        <td colspan="${accessToken ? '4' : '4'}" style="text-align: right; padding-right: 20px;">TOTAL</td>
+                        <td colspan="4" style="text-align: right; padding-right: 20px;">TOTAL</td>
                         <td class="number" style="color: white;">${formatNumber(totalPenggunaan)}</td>
                         <td class="currency" style="color: white;">${formatRupiah(totalTagihan)}</td>
+                        <td></td>
                         ${accessToken ? '<td></td>' : ''}
                     </tr>
                 </tbody>
@@ -1602,5 +1615,3 @@ if (event.target === modal) {
 closeModal();
 }
 }
-
-
