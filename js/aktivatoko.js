@@ -221,6 +221,10 @@ function clearStoredToken() {
 }
 
 function handleAuth() {
+    if (!gapiInited || !gisInited) {
+        alert('Google API belum siap, tunggu sebentar lalu coba lagi.');
+        return;
+    }
     if (accessToken) {
         alert('Sudah terauthentikasi!');
         return;
