@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIMTOCS - Data Aktiva Toko</title>
-    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/surkas2025.css">
     <link rel="stylesheet" href="css/aktivatoko.css">
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-<body>
 
+<body>
+    <!-- Auto-logout Warning Modal -->
     <div class="logout-warning" id="logoutWarning">
         <div class="warning-content">
             <h3>⚠️ Peringatan Inaktivitas</h3>
@@ -19,56 +18,115 @@
         </div>
     </div>
 
+    <!-- User Bar -->
     <div class="user-bar">
         <div class="user-info">
-            <span>👤</span> <span class="user-name" id="displayUsername">Guest</span>
+            <span>👤</span>
+            <span id="displayUsername">Guest</span>
         </div>
-        <div class="user-actions">
-            <button onclick="window.location.href='index.html'" class="auth-btn">
-                <span>🏠</span> Dashboard
-            </button>
-            <button id="authBtn" onclick="handleAuth()" class="auth-btn" style="display:none;">
-                <span>🔐</span> <span id="authBtnText">Otentikasi</span>
-            </button>
-            <button onclick="logout()" class="logout-btn">
-                <span>🚪</span> Logout
-            </button>
-        </div>
+        <button id="authBtn" onclick="handleAuth()" class="auth-btn">
+            <span>🔐</span>
+            <span id="authBtnText">Otentikasi</span>
+        </button>
+        <button onclick="logout()" class="logout-btn">
+            <span>🚪</span>
+            <span>Logout</span>
+        </button>
     </div>
 
+    <!-- Main Container -->
     <div class="container">
         <div class="header">
             <h1>🏢 Data Aktiva Toko</h1>
             <p>Daftar Aset Tetap dan Inventaris Per Cabang</p>
         </div>
 
-        <div class="aktiva-container">
-            <div class="aktiva-card">
-                <div class="filter-row">
-                    <div class="filter-group">
-                        <label for="storeSelect">Pilih Cabang Toko:</label>
-                        <select id="storeSelect" onchange="loadAktivaData()">
-                            <option value="">-- Pilih Toko --</option>
-                            <option value="F4SD">F4SD - SPBU Teras Ayung</option>
-                            <option value="FKOM">FKOM - Komodo</option>
-                            <option value="FHEN">FHEN - Hasanuddin</option>
-                            <option value="FEHU">FEHU - Teuku Umar</option>
-                            <option value="FIVI">FIVI - Imam Bonjol</option>
-                            <option value="FZ7Y">FZ7Y - Sunset Road</option>
-                        </select>
-                    </div>
-                </div>
+        <div class="controls">
+            <a href="index.html" class="back-btn">
+                <span>🏠</span>
+                <span>Kembali ke Dashboard</span>
+            </a>
+            <div class="select-wrapper">
+                <select id="storeSelect" onchange="loadAktivaData()">
+                    <option value="">Pilih Toko...</option>
+                    <option value="F4SD">F4SD - SPBU Teras Ayung</option>
+                    <option value="FKOM">FKOM - Komodo</option>
+                    <option value="FHEN">FHEN - Hasanuddin</option>
+                    <option value="FEHU">FEHU - Teuku Umar</option>
+                    <option value="FIVI">FIVI - Imam Bonjol</option>
+                    <option value="FZ7Y">FZ7Y - Sunset Road</option>
+                </select>
             </div>
+            <div class="select-wrapper">
+                <select id="categoryFilter" onchange="handleCategoryFilter()">
+                    <option value="all">Semua Kategori</option>
+                </select>
+            </div>
+            <button class="refresh-btn" onclick="handleRefresh()">
+                <span>🔄</span>
+                <span>Refresh</span>
+            </button>
+        </div>
 
-            <div id="aktivaContent">
-                <div class="empty-state">
-                    <span class="empty-icon">📊</span>
-                    <h3>Pilih toko untuk menampilkan data aktiva</h3>
-                    <p>Data akan dimuat langsung dari database Google Sheets.</p>
-                </div>
+        <div class="content" id="content">
+            <div class="empty-state">
+                <div class="empty-state-icon">🏢</div>
+                <h2>Pilih Toko untuk Melihat Data Aktiva</h2>
+                <p>Gunakan dropdown di atas untuk memilih cabang toko yang ingin ditampilkan</p>
             </div>
         </div>
     </div>
 
-    <script src="js/index.js"></script> <script src="js/aktivatoko.js"></script> </body>
+    <!-- Add/Edit Modal -->
+    <div id="dataModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Tambah Data Aktiva</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="dataForm" onsubmit="handleFormSubmit(event)">
+                <input type="hidden" id="editRowIndex" value="">
+
+                <div class="form-group">
+                    <label for="namaItem">Nama Item *</label>
+                    <input type="text" id="namaItem" name="namaItem" placeholder="Contoh: Mesin Kasir" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="tanggalBeli">Tanggal Beli *</label>
+                    <input type="date" id="tanggalBeli" name="tanggalBeli" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="jumlah">Jumlah *</label>
+                    <input type="number" id="jumlah" name="jumlah" placeholder="0" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="biayaPerolehan">Biaya Perolehan *</label>
+                    <input type="number" id="biayaPerolehan" name="biayaPerolehan" placeholder="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="kategori">Kategori *</label>
+                    <input type="text" id="kategori" name="kategori" placeholder="Contoh: Elektronik">
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">
+                        <span id="submitBtnText">Simpan</span>
+                    </button>
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Google API Scripts -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- JavaScript -->
+    <script src="js/aktivatoko.js"></script>
+</body>
 </html>
