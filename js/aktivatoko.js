@@ -175,8 +175,11 @@ function gisLoaded() {
 
 function maybeEnableButtons() {
     if (gapiInited && gisInited) {
+        console.log('Both APIs ready');
+        console.log('Stored token:', localStorage.getItem('oauth_token'));
+        console.log('Token expiry:', localStorage.getItem('oauth_expiry'));
         if (restoreStoredToken()) {
-            console.log('Restored OAuth token from storage');
+            console.log('Token restored successfully');
         }
     }
 }
@@ -222,13 +225,26 @@ function clearStoredToken() {
 
 function handleAuth() {
     if (!gapiInited || !gisInited) {
-        alert('Google API belum siap, tunggu sebentar lalu coba lagi.');
+        // Wait up to 5 seconds for Google API to be ready
+        let attempts = 0;
+        const interval = setInterval(() => {
+            attempts++;
+            if (gapiInited && gisInited) {
+                clearInterval(interval);
+                handleAuth();
+            } else if (attempts >= 10) {
+                clearInterval(interval);
+                alert('Google API gagal dimuat. Silakan refresh halaman.');
+            }
+        }, 500);
         return;
     }
+
     if (accessToken) {
         alert('Sudah terauthentikasi!');
         return;
     }
+
     tokenClient.callback = async (response) => {
         if (response.error !== undefined) {
             alert('Gagal authenticate: ' + response.error);
@@ -244,6 +260,7 @@ function handleAuth() {
         }
         alert('✅ Berhasil authenticate! Sekarang Anda bisa menambah, edit, dan hapus data.');
     };
+
     if (gapi.client.getToken() === null) {
         tokenClient.requestAccessToken({ prompt: 'consent' });
     } else {
