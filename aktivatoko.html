@@ -56,7 +56,7 @@
                     <option value="FIVI">FIVI - Indomaret Toko Anugrah, Banyuwangi</option>
                     <option value="FZ7Y">FZ7Y - Indomaret Pemuda 28, Mataram</option>
                     <option value="1SFY">1SFY - Alfamart SPBU Mantang, Batukliang</option>
-                    <option value="FZ7Y">FZ7Y - Alfamart SPBU Dewi Anom, Rendang</option>
+                    <option value="Q789">Q789 - Alfamart SPBU Dewi Anom, Rendang</option>
                 </select>
             </div>
             <div class="select-wrapper">
@@ -124,9 +124,8 @@
         </div>
     </div>
 
-    <!-- Google API Scripts -->
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 
     <!-- JavaScript -->
     <script src="js/aktivatoko.js"></script>
