@@ -348,30 +348,23 @@ function setCachedData(key, data) {
 // ============ LOAD DATA ============
 async function loadAktivaData(forceRefresh = false) {
     const store = document.getElementById('storeSelect').value;
-    if (!store) {
-        showEmptyState();
-        return;
-    }
+    if (!store) { showEmptyState(); return; }
 
     aktivaState.currentStore = store;
     const cacheKey = `aktiva_${store}`;
 
     if (!forceRefresh) {
         const cached = getCachedData(cacheKey);
-        if (cached) {
-            displayAktivaData(cached, store);
-            return;
-        }
+        if (cached) { displayAktivaData(cached, store); return; }
     }
 
     showLoading(`Memuat data aktiva: ${store}`);
 
     try {
         const response = await fetch(
-            `https://sheets.googleapis.com/v4/spreadsheets/${AKTIVA_CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(store)}!${AKTIVA_CONFIG.RANGE}?key=${AKTIVA_CONFIG.API_KEY}`
+            `https://sheets.googleapis.com/v4/spreadsheets/${AKTIVA_CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(store)}!A1:F200?key=${AKTIVA_CONFIG.API_KEY}`
         );
         const data = await response.json();
-
         if (data.error) throw new Error(data.error.message);
 
         const rows = data.values || [];
@@ -383,7 +376,6 @@ async function loadAktivaData(forceRefresh = false) {
         setCachedData(cacheKey, rows);
         aktivaState.currentData = rows;
         aktivaState.lastUpdate = new Date();
-
         displayAktivaData(rows, store);
 
     } catch (err) {
@@ -400,32 +392,31 @@ function handleRefresh() {
 
 // ============ DISPLAY DATA ============
 function displayAktivaData(rows, storeName) {
-    // Parse rows: detect category headers vs data rows
     const parsed = parseRows(rows);
 
-    // Build category list for filter dropdown
-    const categories = ['all', ...new Set(parsed.filter(r => r.isCategory).map(r => r.label))];
+    // Build category list
+    const categories = ['all', ...new Set(parsed.map(r => r.kategori))];
     aktivaState.allCategories = categories;
     populateCategoryFilter(categories);
 
     // Apply filter
-    const filtered = applyFilter(parsed, aktivaState.currentFilter);
+    const filtered = aktivaState.currentFilter === 'all'
+        ? parsed
+        : parsed.filter(r => r.kategori === aktivaState.currentFilter);
 
-    // Calculate stats
-    const dataRows = parsed.filter(r => !r.isCategory);
-    const totalItems = dataRows.length;
-    const totalBiaya = dataRows.reduce((sum, r) => sum + r.biayaPerolehan, 0);
-    const totalJumlah = dataRows.reduce((sum, r) => sum + r.jumlah, 0);
-    const totalCategories = categories.length - 1; // minus 'all'
+    // Stats
+    const totalItems    = parsed.length;
+    const totalJumlah   = parsed.reduce((sum, r) => sum + r.jumlah, 0);
+    const totalBiaya    = parsed.reduce((sum, r) => sum + r.biayaPerolehan, 0);
+    const totalCategories = categories.length - 1;
 
     const isAdmin = (() => {
         const authData = getAuthData();
-        return authData && authData.role && authData.role.toLowerCase() === 'admin';
+        return authData?.role?.toLowerCase() === 'admin';
     })();
 
     const lastUpdateStr = aktivaState.lastUpdate
-        ? aktivaState.lastUpdate.toLocaleTimeString('id-ID')
-        : '-';
+        ? aktivaState.lastUpdate.toLocaleTimeString('id-ID') : '-';
 
     let html = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
@@ -437,22 +428,10 @@ function displayAktivaData(rows, storeName) {
         </div>
 
         <div class="stats">
-            <div class="stat-card">
-                <h3>${totalItems}</h3>
-                <p>Total Item Aktiva</p>
-            </div>
-            <div class="stat-card">
-                <h3>${totalJumlah}</h3>
-                <p>Total Jumlah Unit</p>
-            </div>
-            <div class="stat-card">
-                <h3>${totalCategories}</h3>
-                <p>Kategori Aktiva</p>
-            </div>
-            <div class="stat-card-finale">
-                <h3>${formatRupiah(totalBiaya)}</h3>
-                <p>Total Biaya Perolehan</p>
-            </div>
+            <div class="stat-card"><h3>${totalItems}</h3><p>Total Item Aktiva</p></div>
+            <div class="stat-card"><h3>${totalJumlah}</h3><p>Total Jumlah Unit</p></div>
+            <div class="stat-card"><h3>${totalCategories}</h3><p>Kategori Aktiva</p></div>
+            <div class="stat-card-finale"><h3>${formatRupiah(totalBiaya)}</h3><p>Total Biaya Perolehan</p></div>
         </div>
 
         <div class="table-container">
@@ -464,40 +443,32 @@ function displayAktivaData(rows, storeName) {
                         <th>Tanggal Beli</th>
                         <th>Jumlah</th>
                         <th>Biaya Perolehan</th>
+                        <th>Kategori</th>
                         ${isAdmin ? '<th>Aksi</th>' : ''}
                     </tr>
                 </thead>
                 <tbody>
     `;
 
-    filtered.forEach((row, idx) => {
-        if (row.isCategory) {
-            const colspan = isAdmin ? 6 : 5;
-            html += `<tr class="category-row"><td colspan="${colspan}">📁 ${row.label}</td></tr>`;
-        } else {
-            html += `
-                <tr>
-                    <td style="text-align:center;">${row.no || (idx + 1)}</td>
-                    <td>${row.namaItem || '-'}</td>
-                    <td style="text-align:center;">${row.tanggalBeli || '-'}</td>
-                    <td style="text-align:center;">${row.jumlah || '0'}</td>
-                    <td class="currency positive">${formatRupiah(row.biayaPerolehan)}</td>
-                    ${isAdmin ? `
-                    <td class="actions">
-                        <button class="btn-edit" onclick="openEditModal(${row.originalIndex})">✏️ Edit</button>
-                        <button class="btn-delete" onclick="deleteRow(${row.originalIndex})">🗑️ Hapus</button>
-                    </td>` : ''}
-                </tr>
-            `;
-        }
+    filtered.forEach(row => {
+        html += `
+            <tr>
+                <td style="text-align:center;">${row.no}</td>
+                <td>${row.namaItem}</td>
+                <td style="text-align:center;">${row.tanggalBeli}</td>
+                <td style="text-align:center;">${row.jumlah}</td>
+                <td class="currency positive">${formatRupiah(row.biayaPerolehan)}</td>
+                <td>${row.kategori}</td>
+                ${isAdmin ? `
+                <td class="actions">
+                    <button class="btn-edit" onclick="openEditModal(${row.originalIndex})">✏️ Edit</button>
+                    <button class="btn-delete" onclick="deleteRow(${row.originalIndex})">🗑️ Hapus</button>
+                </td>` : ''}
+            </tr>
+        `;
     });
 
-    html += `
-                </tbody>
-            </table>
-        </div>
-    `;
-
+    html += `</tbody></table></div>`;
     document.getElementById('content').innerHTML = html;
 }
 
@@ -516,24 +487,16 @@ function parseRows(rows) {
     // Skip header row (index 0)
     for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
-        // Category: row has content only in first 1-2 cols and no biaya column
-        if ((!row[2] && !row[3] && !row[4]) && (row[0] || row[1])) {
-            parsed.push({
-                isCategory: true,
-                label: row[0] || row[1],
-                originalIndex: i
-            });
-        } else if (row.length >= 2 && (row[0] || row[1])) {
-            parsed.push({
-                isCategory: false,
-                no: row[0],
-                namaItem: row[1] || '-',
-                tanggalBeli: row[2] || '-',
-                jumlah: parseNumber(row[3]),
-                biayaPerolehan: parseNumber(row[4]),
-                originalIndex: i
-            });
-        }
+        if (!row || !row.some(cell => cell && cell.toString().trim() !== '')) continue; // skip empty rows
+        parsed.push({
+            no:             row[0] || '',
+            namaItem:       row[1] || '-',
+            tanggalBeli:    row[2] || '-',
+            jumlah:         parseNumber(row[3]),
+            biayaPerolehan: parseNumber(row[4]),
+            kategori:       row[5] || 'Tanpa Kategori',
+            originalIndex:  i
+        });
     }
     return parsed;
 }
@@ -582,20 +545,17 @@ function openAddModal() {
 }
 
 function openEditModal(rowIndex) {
-    const rows = aktivaState.currentData;
-    const row = rows[rowIndex];
+    const row = aktivaState.currentData[rowIndex];
     if (!row) return;
 
     document.getElementById('modalTitle').textContent = 'Edit Data Aktiva';
     document.getElementById('submitBtnText').textContent = 'Update';
     document.getElementById('editRowIndex').value = rowIndex;
-
-    document.getElementById('namaItem').value = row[1] || '';
+    document.getElementById('namaItem').value    = row[1] || '';
     document.getElementById('tanggalBeli').value = row[2] || '';
-    document.getElementById('jumlah').value = parseNumber(row[3]) || '';
+    document.getElementById('jumlah').value      = parseNumber(row[3]) || '';
     document.getElementById('biayaPerolehan').value = parseNumber(row[4]) || '';
-    populateKategoriDropdown(row[5] || ''); // ← replace the old kategori line
-    
+    populateKategoriDropdown(row[5] || '');
     document.getElementById('dataModal').classList.add('show');
 }
 
@@ -606,36 +566,40 @@ function closeModal() {
 
 async function handleFormSubmit(event) {
     event.preventDefault();
-
     if (!accessToken) {
         alert('⚠️ Silakan otentikasi terlebih dahulu untuk menyimpan data.');
         return;
     }
 
-    const rowIndex = document.getElementById('editRowIndex').value;
-    const namaItem = document.getElementById('namaItem').value;
-    const tanggalBeli = document.getElementById('tanggalBeli').value;
-    const jumlah = document.getElementById('jumlah').value;
+    const rowIndex       = document.getElementById('editRowIndex').value;
+    const namaItem       = document.getElementById('namaItem').value;
+    const tanggalBeli    = document.getElementById('tanggalBeli').value;
+    const jumlah         = document.getElementById('jumlah').value;
     const biayaPerolehan = document.getElementById('biayaPerolehan').value;
-    const kategori = document.getElementById('kategori').value;
+    const kategori       = document.getElementById('kategori').value;
+    const store          = aktivaState.currentStore;
 
-    const rowData = ['', namaItem, tanggalBeli, jumlah, biayaPerolehan, kategori];
+    // Auto-number: find the next Nomor
+    const parsed = parseRows(aktivaState.currentData);
+    const nextNo = rowIndex !== ''
+        ? aktivaState.currentData[rowIndex]?.[0] || ''
+        : (Math.max(0, ...parsed.map(r => parseInt(r.no) || 0)) + 1).toString();
+
+    const rowData = [nextNo, namaItem, tanggalBeli, jumlah, biayaPerolehan, kategori];
 
     try {
-        const store = aktivaState.currentStore;
-
         if (rowIndex !== '') {
-            // Edit mode: update existing row
-            const sheetRowNumber = parseInt(rowIndex) + 1; // 1-based
+            // EDIT
+            const sheetRow = parseInt(rowIndex) + 1;
             await gapi.client.sheets.spreadsheets.values.update({
                 spreadsheetId: AKTIVA_CONFIG.SPREADSHEET_ID,
-                range: `${store}!A${sheetRowNumber}:F${sheetRowNumber}`,
+                range: `${store}!A${sheetRow}:F${sheetRow}`,
                 valueInputOption: 'USER_ENTERED',
                 resource: { values: [rowData] }
             });
             alert('✅ Data berhasil diperbarui!');
         } else {
-            // Add mode: append row
+            // ADD — simple append, category is just a column value now
             await gapi.client.sheets.spreadsheets.values.append({
                 spreadsheetId: AKTIVA_CONFIG.SPREADSHEET_ID,
                 range: `${store}!A:F`,
