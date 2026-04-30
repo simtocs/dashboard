@@ -5,7 +5,7 @@ const AKTIVA_CONFIG = {
     SPREADSHEET_ID: '1rRwjnxKKsKXn4gYGhld8HqcYH3ycU7wz1b3sk_UFMko',
     SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
     CACHE_DURATION: 5 * 60 * 1000,
-    RANGE: 'A1:E200'
+    RANGE: 'A1:F200'
 };
 
 // ============ OAUTH STATE ============
@@ -517,23 +517,6 @@ function handleCategoryFilter() {
     }
 }
 
-function applyFilter(parsed, filter) {
-    if (filter === 'all') return parsed;
-
-    const result = [];
-    let inTarget = false;
-
-    for (const row of parsed) {
-        if (row.isCategory) {
-            inTarget = row.label === filter;
-            if (inTarget) result.push(row);
-        } else if (inTarget) {
-            result.push(row);
-        }
-    }
-    return result;
-}
-
 // ============ MODAL ============
 function openAddModal() {
     document.getElementById('modalTitle').textContent = 'Tambah Data Aktiva';
@@ -579,18 +562,15 @@ async function handleFormSubmit(event) {
     const kategori       = document.getElementById('kategori').value;
     const store          = aktivaState.currentStore;
 
-    // Auto-number: find the next Nomor
     const parsed = parseRows(aktivaState.currentData);
-    const nextNo = rowIndex !== ''
-        ? aktivaState.currentData[rowIndex]?.[0] || ''
-        : (Math.max(0, ...parsed.map(r => parseInt(r.no) || 0)) + 1).toString();
-
-    const rowData = [nextNo, namaItem, tanggalBeli, jumlah, biayaPerolehan, kategori];
 
     try {
         if (rowIndex !== '') {
-            // EDIT
+            // ============ EDIT MODE ============
+            const existingNo = aktivaState.currentData[rowIndex]?.[0] || '';
+            const rowData = [existingNo, namaItem, tanggalBeli, jumlah, biayaPerolehan, kategori];
             const sheetRow = parseInt(rowIndex) + 1;
+
             await gapi.client.sheets.spreadsheets.values.update({
                 spreadsheetId: AKTIVA_CONFIG.SPREADSHEET_ID,
                 range: `${store}!A${sheetRow}:F${sheetRow}`,
@@ -598,13 +578,57 @@ async function handleFormSubmit(event) {
                 resource: { values: [rowData] }
             });
             alert('✅ Data berhasil diperbarui!');
+
         } else {
-            // ADD — simple append, category is just a column value now
-            await gapi.client.sheets.spreadsheets.values.append({
+            // ============ ADD MODE ============
+            const categoryRows = parsed.filter(r => r.kategori === kategori);
+
+            let insertAfterSheetRow;
+            if (categoryRows.length > 0) {
+                // Insert after the last item in this category
+                insertAfterSheetRow = categoryRows[categoryRows.length - 1].originalIndex + 1;
+            } else {
+                // New category — insert after the last non-empty row
+                insertAfterSheetRow = parsed[parsed.length - 1].originalIndex + 1;
+            }
+
+            // Get sheet ID for batchUpdate
+            const spreadsheetResponse = await gapi.client.sheets.spreadsheets.get({
+                spreadsheetId: AKTIVA_CONFIG.SPREADSHEET_ID
+            });
+            const sheet = spreadsheetResponse.result.sheets.find(
+                s => s.properties.title === store
+            );
+            if (!sheet) throw new Error('Sheet tidak ditemukan');
+            const sheetId = sheet.properties.sheetId;
+
+            // Insert a blank row at the target position
+            await gapi.client.sheets.spreadsheets.batchUpdate({
                 spreadsheetId: AKTIVA_CONFIG.SPREADSHEET_ID,
-                range: `${store}!A:F`,
+                resource: {
+                    requests: [{
+                        insertDimension: {
+                            range: {
+                                sheetId: sheetId,
+                                dimension: 'ROWS',
+                                startIndex: insertAfterSheetRow, // 0-based
+                                endIndex: insertAfterSheetRow + 1
+                            },
+                            inheritFromBefore: true
+                        }
+                    }]
+                }
+            });
+
+            // Global numbering — max Nomor across all rows + 1
+            const nextNo = (Math.max(0, ...parsed.map(r => parseInt(r.no) || 0)) + 1).toString();
+            const rowData = [nextNo, namaItem, tanggalBeli, jumlah, biayaPerolehan, kategori];
+
+            // Write data into the newly inserted row
+            await gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: AKTIVA_CONFIG.SPREADSHEET_ID,
+                range: `${store}!A${insertAfterSheetRow + 1}:F${insertAfterSheetRow + 1}`,
                 valueInputOption: 'USER_ENTERED',
-                insertDataOption: 'INSERT_ROWS',
                 resource: { values: [rowData] }
             });
             alert('✅ Data berhasil ditambahkan!');
