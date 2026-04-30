@@ -501,6 +501,15 @@ function displayAktivaData(rows, storeName) {
     document.getElementById('content').innerHTML = html;
 }
 
+function populateKategoriDropdown(selectedValue = '') {
+    const select = document.getElementById('kategori');
+    const categories = aktivaState.allCategories.filter(c => c !== 'all');
+    select.innerHTML = `<option value="">-- Pilih Kategori --</option>` +
+        categories.map(cat =>
+            `<option value="${cat}" ${cat === selectedValue ? 'selected' : ''}>${cat}</option>`
+        ).join('');
+}
+
 // ============ ROW PARSING ============
 function parseRows(rows) {
     const parsed = [];
@@ -568,6 +577,7 @@ function openAddModal() {
     document.getElementById('submitBtnText').textContent = 'Simpan';
     document.getElementById('editRowIndex').value = '';
     document.getElementById('dataForm').reset();
+    populateKategoriDropdown();
     document.getElementById('dataModal').classList.add('show');
 }
 
@@ -584,8 +594,8 @@ function openEditModal(rowIndex) {
     document.getElementById('tanggalBeli').value = row[2] || '';
     document.getElementById('jumlah').value = parseNumber(row[3]) || '';
     document.getElementById('biayaPerolehan').value = parseNumber(row[4]) || '';
-    document.getElementById('kategori').value = row[5] || '';
-
+    populateKategoriDropdown(row[5] || ''); // ← replace the old kategori line
+    
     document.getElementById('dataModal').classList.add('show');
 }
 
