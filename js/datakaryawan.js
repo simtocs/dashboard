@@ -455,7 +455,10 @@ function syncData() {
 
 function updateStats() {
     const totalStores = allStores.length;
-    const totalEmployees = allStores.reduce((sum, s) => sum + s.employees.length, 0);
+    const totalEmployees = allStores.reduce((sum, s) => {
+        const kepalaCount = s.coordinator.name ? 1 : 0;
+        return sum + s.employees.length + kepalaCount;
+    }, 0);
    
     document.getElementById('totalStores').textContent = totalStores;
     document.getElementById('totalEmployees').textContent = totalEmployees;
