@@ -426,7 +426,7 @@ function processGoogleSheetsData(rows) {
             };
         }
         
-        if (position && position.toLowerCase().includes('koordinator')) {
+        if (position && position.toLowerCase().includes('kepala toko')) {
             storeMap[storeName].coordinator.name = name.trim();
             storeMap[storeName].coordinator.whatsapp = row[3] || '';
         } else {
@@ -677,7 +677,7 @@ async function handleStoreSubmit(event) {
             const store = filteredStores[parseInt(editStoreIndex)];
             await updateStoreInSheet(store, fullStoreName, coordinatorName, coordinatorWhatsapp);
         } else {
-            const rowData = [fullStoreName, 'Koordinator Toko', coordinatorName, coordinatorWhatsapp];
+            const rowData = [fullStoreName, 'Kepala Toko', coordinatorName, coordinatorWhatsapp];
             await addRow(rowData);
         }
         
@@ -748,7 +748,7 @@ async function updateStoreInSheet(store, newStoreName, newCoordinatorName, newCo
         const oldStoreName = store.code ? `${store.name} (${store.code})` : store.name;
         
         if (row[0] === oldStoreName) {
-            if (row[1] && row[1].toLowerCase().includes('koordinator')) {
+            if (row[1] && row[1].toLowerCase().includes('kepala toko')) {
                 updates.push({
                     range: `${CONFIG.SHEET_NAME}!A${i + 1}:D${i + 1}`,
                     values: [[newStoreName, row[1], newCoordinatorName, newCoordinatorWhatsapp]]
@@ -784,7 +784,7 @@ async function updateEmployeeInSheet(store, empIdx, newEmployeeName) {
     
     for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
-        if (row[0] === oldStoreName && row[1] && !row[1].toLowerCase().includes('koordinator')) {
+        if (row[0] === oldStoreName && row[1] && !row[1].toLowerCase().includes('kepala toko')) {
             employeeCount++;
             if (employeeCount === empIdx) {
                 try {
@@ -889,7 +889,7 @@ async function handleDeleteEmployee(storeIdx, empIdx) {
         
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
-            if (row[0] === oldStoreName && row[1] && !row[1].toLowerCase().includes('koordinator')) {
+            if (row[0] === oldStoreName && row[1] && !row[1].toLowerCase().includes('kepala toko')) {
                 employeeCount++;
                 if (employeeCount === empIdx) {
                     await gapi.client.sheets.spreadsheets.batchUpdate({
