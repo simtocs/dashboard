@@ -289,6 +289,10 @@ function updateAuthButton(isAuthenticated) {
 }
 
 // ============ UTILITY FUNCTIONS ============
+function printReport() {
+    window.print();
+}
+
 function showLoading(message = 'Memuat data dari Database...') {
     document.getElementById('storeData').innerHTML = `
         <div class="loading">
