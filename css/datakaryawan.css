@@ -889,3 +889,237 @@ body::before {
         flex-direction: column;
     }
 }
+
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 15mm 12mm 15mm 12mm;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Hide non-print elements */
+    .user-bar,
+    .controls,
+    .sync-info,
+    .logout-warning,
+    .store-actions,
+    .employee-actions,
+    .add-btn,
+    .btn-edit-store,
+    .btn-delete-store,
+    .btn-edit-emp,
+    .btn-delete-emp,
+    .last-update,
+    #refreshBtn {
+        display: none !important;
+    }
+
+    body {
+        background: white !important;
+        background-image: none !important;
+        padding: 0 !important;
+        font-size: 11pt;
+    }
+
+    body::before {
+        display: none !important;
+    }
+
+    .container {
+        max-width: 100% !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        animation: none !important;
+        margin: 0 !important;
+    }
+
+    /* Print header */
+    .header {
+        background: #667eea !important;
+        color: white !important;
+        padding: 18px 20px !important;
+        text-align: center !important;
+        border-radius: 0 !important;
+    }
+
+    .header h1 {
+        font-size: 16pt !important;
+        margin-bottom: 4px !important;
+    }
+
+    .header p {
+        font-size: 10pt !important;
+        opacity: 1 !important;
+    }
+
+    /* Print meta info below header */
+    .header::after {
+        content: "Dicetak pada: " attr(data-print-time);
+        display: block;
+        font-size: 8pt;
+        opacity: 0.85;
+        margin-top: 6px;
+    }
+
+    /* Stats */
+    .content {
+        padding: 12px 16px !important;
+    }
+
+    .stats {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .stat-card {
+        background: #667eea !important;
+        color: white !important;
+        padding: 12px !important;
+        border-radius: 6px !important;
+        text-align: center !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+
+    .stat-card h3 {
+        font-size: 18pt !important;
+        margin-bottom: 2px !important;
+    }
+
+    .stat-card p {
+        font-size: 9pt !important;
+    }
+
+    /* Data grid — 2 columns on A4 */
+    .data-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        margin-bottom: 0 !important;
+    }
+
+    /* Store cards */
+    .store-card {
+        background: white !important;
+        border: 1px solid #ccc !important;
+        border-left: 3px solid #667eea !important;
+        border-radius: 6px !important;
+        box-shadow: none !important;
+        transform: none !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        overflow: visible !important;
+    }
+
+    .store-header {
+        background: #667eea !important;
+        color: white !important;
+        padding: 10px 12px !important;
+        position: relative !important;
+    }
+
+    .store-title h3 {
+        font-size: 10pt !important;
+        margin-bottom: 0 !important;
+    }
+
+    .store-code {
+        background: rgba(255,255,255,0.25) !important;
+        padding: 2px 8px !important;
+        border-radius: 10px !important;
+        font-size: 8pt !important;
+    }
+
+    .store-title {
+        margin-bottom: 6px !important;
+    }
+
+    .store-info {
+        font-size: 8pt !important;
+        opacity: 1 !important;
+    }
+
+    .store-info-row {
+        margin-bottom: 3px !important;
+        gap: 5px !important;
+    }
+
+    .store-info-row .label {
+        min-width: 70px !important;
+        font-size: 8pt !important;
+    }
+
+    .store-info-row .value {
+        font-size: 8pt !important;
+    }
+
+    .store-body {
+        padding: 8px 12px !important;
+    }
+
+    .employee-list {
+        gap: 5px !important;
+    }
+
+    .employee-item {
+        padding: 5px 8px !important;
+        background: #f5f5f5 !important;
+        border-radius: 4px !important;
+    }
+
+    .employee-number {
+        width: 22px !important;
+        height: 22px !important;
+        font-size: 8pt !important;
+        background: #667eea !important;
+        color: white !important;
+        border-radius: 50% !important;
+    }
+
+    .employee-name {
+        font-size: 9pt !important;
+        color: #333 !important;
+    }
+
+    /* WhatsApp link — plain text in print */
+    .whatsapp-btn {
+        color: #333 !important;
+        background: none !important;
+        padding: 0 !important;
+        text-decoration: none !important;
+    }
+
+    /* Marks/highlights */
+    mark {
+        background: #ffe082 !important;
+        padding: 0 !important;
+    }
+
+    /* Page break helpers */
+    .data-grid {
+        page-break-after: auto;
+    }
+
+    .store-card:nth-child(2n) {
+        page-break-after: auto;
+    }
+
+    /* Footer on each printed page */
+    .content::after {
+        content: "SIMTOCS — Sistem Informasi Manajemen Toko Carang Sari";
+        display: block;
+        text-align: center;
+        font-size: 8pt;
+        color: #999;
+        margin-top: 16px;
+        padding-top: 10px;
+        border-top: 1px solid #eee;
+    }
+}
