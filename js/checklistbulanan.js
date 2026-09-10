@@ -470,6 +470,23 @@ async function loadSheetData(sheetName, forceRefresh = false) {
     }
 }
 
+// ============ CHECKLIST STRUCTURE HELPERS ============
+// A section header row is column A text like "I. AREA PENJUALAN".
+// Kept as one shared function so the item count/number of sections can
+// change freely (e.g. when the checklist standard is updated) without
+// needing to touch any other code.
+function isSectionHeaderText(text) {
+    return /^[IVX]+\.\s+\S/.test((text || '').trim());
+}
+
+// The signature row ("Diketahui Oleh" / nama penanggung jawab) is detected
+// by its label instead of a fixed row index, so it keeps working no matter
+// how many checklist items are above it.
+function isSignatureRow(row) {
+    const label = ((row && row[0]) || '').trim().toLowerCase();
+    return label.startsWith('diketahui oleh') || label.startsWith('mengetahui');
+}
+
 // ============ AUTO SCORE FUNCTIONS ============
 function calculateAutoScore() {
     if (!appState.currentData || appState.currentData.length < 2) {
@@ -497,8 +514,10 @@ function calculateAutoScore() {
     let currentCategory = '';
     
     dataRows.forEach(row => {
+        if (isSignatureRow(row)) return;
+        
         const firstCell = (row[0] || '').trim();
-        const isSectionHeader = /^[IVX]+\.\s+/.test(firstCell);
+        const isSectionHeader = isSectionHeaderText(firstCell);
         
         if (isSectionHeader) {
             currentCategory = firstCell;
@@ -547,13 +566,13 @@ function getSignatureData() {
     let title = 'Diketahui Oleh';
     let name = '';
     
-    // Row 33 (index 32) = Manager Carang Sari Group
-    if (appState.currentData && appState.currentData.length > 32) {
-        const row33 = appState.currentData[32]; // A33, B33
-        
-        if (row33 && row33.length >= 2) {
-            title = row33[0] || title;  // A33: Manager Carang Sari Group
-            name = row33[1] || '';       // B33: Nama Manager
+    // Find the signature row by its label (column A), not by a fixed row
+    // number, so this keeps working if the checklist item count changes.
+    if (appState.currentData) {
+        const sigRow = appState.currentData.find(row => isSignatureRow(row));
+        if (sigRow) {
+            title = sigRow[0] || title;
+            name = sigRow[1] || '';
         }
     }
     
@@ -591,6 +610,86 @@ function updateAutoScore() {
             `;
         }
     }
+}
+
+// ============ SMART REVIEW GENERATOR ============
+// Builds a professional review draft from the checklist's own Ya/Tidak data
+// and Keterangan notes. This runs entirely in the browser - it does not call
+// an external AI API, because doing so from client-side code would require
+// embedding an API key that anyone viewing the page source could read.
+function handleSmartReview() {
+    const scoreData = calculateAutoScore();
+    if (!scoreData) {
+        alert('⚠️ Belum ada data Status Ya/Tidak untuk dianalisis. Isi checklist terlebih dahulu.');
+        return;
+    }
+
+    const btn = document.getElementById('aiReviewBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span><span>Menganalisis...</span>';
+    }
+
+    const headers = appState.currentData[0] || [];
+    let statusCol = -1, notesCol = -1;
+    const itemCol = 1;
+    headers.forEach((h, i) => {
+        const hl = (h || '').toLowerCase();
+        if (hl.includes('status')) statusCol = i;
+        if (hl.includes('keterangan')) notesCol = i;
+    });
+
+    let currentCategory = '';
+    const issues = [];
+
+    appState.currentData.slice(1).forEach(row => {
+        if (isSignatureRow(row)) return;
+        const firstCell = (row[0] || '').trim();
+
+        if (isSectionHeaderText(firstCell)) {
+            currentCategory = firstCell.replace(/^[IVX]+\.\s*/, '');
+            return;
+        }
+        if (statusCol > -1 && (row[statusCol] || '').toLowerCase().trim() === 'tidak') {
+            const itemText = row[itemCol] || firstCell;
+            const note = notesCol > -1 ? (row[notesCol] || '').trim() : '';
+            issues.push({ category: currentCategory, item: itemText, note });
+        }
+    });
+
+    const commentBox = document.getElementById('storeComment');
+    const manualNotes = commentBox ? commentBox.value.trim() : '';
+
+    let review = `Berdasarkan hasil pemeriksaan bulanan, toko mencapai tingkat kepatuhan ${scoreData.percentage}% (${scoreData.yesCount} dari ${scoreData.totalItems} item terpenuhi terhadap standar QSCV & Program 5 PRIMA), dengan skor ${scoreData.score} / 5.0.`;
+
+    if (issues.length === 0) {
+        review += ' Seluruh item pemeriksaan telah terpenuhi dengan baik. Pertahankan konsistensi pelaksanaan operasional toko sesuai standar yang berlaku.';
+    } else {
+        review += `\n\nTerdapat ${issues.length} item yang masih perlu ditindaklanjuti:\n`;
+        issues.slice(0, 10).forEach(iss => {
+            review += `• [${iss.category}] ${iss.item}${iss.note ? ' — ' + iss.note : ''}\n`;
+        });
+        if (issues.length > 10) {
+            review += `...dan ${issues.length - 10} item lainnya.\n`;
+        }
+        review += '\nDisarankan segera menindaklanjuti poin-poin di atas agar toko dapat memenuhi standar Program 5 PRIMA secara penuh pada periode berikutnya.';
+    }
+
+    if (manualNotes) {
+        review += `\n\nCatatan tambahan dari pemeriksa: ${manualNotes}`;
+    }
+
+    if (commentBox) {
+        commentBox.value = review;
+        markAsChanged();
+    }
+
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🤖</span><span>Generate Smart Review</span>';
+    }
+
+    showNotificationBanner('✅ Review berhasil dibuat', 'success');
 }
 
 function showNotificationBanner(message, type = 'info') {
@@ -647,21 +746,21 @@ function displayData(values, sheetName) {
 
     for (let rowIdx = 1; rowIdx < values.length; rowIdx++) {
         const row = values[rowIdx] || [];
-        // Skip rows 32 and 33 (index 31 and 32) - signature data
-        if (rowIdx === 31 || rowIdx === 32) {
+        // Skip the signature row - detected by label, not a fixed position
+        if (isSignatureRow(row)) {
             continue;
         }
         
         html += `<tr>`;
         
         const firstCell = (row[0] || '').trim();
-        const isSectionHeader = /^[IVX]+\.\s+[A-Z]/.test(firstCell);
+        const isSectionHeader = isSectionHeaderText(firstCell);
         
         for (let colIdx = 0; colIdx < headers.length; colIdx++) {
             const cellValue = row[colIdx] || '';
             const header = headers[colIdx] || '';
             
-            if (isSectionHeader && (header.toLowerCase().includes('status') || header.toLowerCase().includes('keterangan'))) {
+            if (isSectionHeader && (header.toLowerCase().includes('status') || header.toLowerCase().includes('keterangan') || header.toLowerCase().includes('foto') || header.toLowerCase().includes('photo') || header.toLowerCase().includes('gambar'))) {
                 html += `<td style="background: #f8f9fa;"></td>`;
             }
             else if (header.toLowerCase().includes('status')) {
@@ -1251,7 +1350,7 @@ function generatePrintReport() {
     });
 
     const headers = appState.currentData[0];
-    const dataRows = appState.currentData.slice(1);
+    const dataRows = appState.currentData.slice(1).filter(row => !isSignatureRow(row));
     const signatureData = getSignatureData();
     
     let printHTML = `
@@ -1495,7 +1594,7 @@ function generatePrintReport() {
     
     dataRows.forEach(row => {
         const firstCell = (row[0] || '').trim();
-        const isSectionHeader = /^[IVX]+\.\s+/.test(firstCell);
+        const isSectionHeader = isSectionHeaderText(firstCell);
         
         if (isSectionHeader) {
             if (currentSection && sectionData.length > 0) {
