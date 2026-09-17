@@ -681,24 +681,22 @@ function getStoreCode(sheetName) {
 
 /**
  * Constructs the expected PDF filename for a given month row
- * e.g. storeCode="F4SD", bulan="NOVEMBER (2024)" → "F4SD_November_2024.pdf"
- * e.g. storeCode="F4SD", bulan="JANUARI" (year from appState) → "F4SD_Januari_2025.pdf"
+ * e.g. storeCode="F4SD", bulan="NOVEMBER (2024)" → "F4SD_2024_November.pdf"
+ * e.g. storeCode="F4SD", bulan="JANUARI" (year from appState) → "F4SD_2025_Januari.pdf"
  */
+
 function getPDFFileName(storeCode, bulan) {
-    if (!storeCode || !bulan) return null;
-
-    // Normalize month string — could be "NOVEMBER (2024)" or just "JANUARI"
-    const yearInMonth = bulan.match(/\((\d{4})\)/);
-    const year = yearInMonth ? yearInMonth[1] : appState.currentYear;
-
-    // Strip year annotation from month name and title-case it
-    const cleanMonth = bulan
-        .replace(/\s*\(\d{4}\)\s*/, '')
-        .trim()
-        .toLowerCase()
-        .replace(/^\w/, c => c.toUpperCase());
-
-    return `${storeCode}_${cleanMonth}_${year}.pdf`;
+  if (!storeCode || !bulan) return null;
+  // Normalize month string — could be "NOVEMBER (2024)" or just "JANUARI"
+  const yearInMonth = bulan.match(/\((\d{4})\)/);
+  const year = yearInMonth ? yearInMonth[1] : appState.currentYear;
+  // Strip year annotation from month name and title-case it
+  const cleanMonth = bulan
+    .replace(/\s*\(\d{4}\)\s*/, '')
+    .trim()
+    .toLowerCase()
+    .replace(/^\w/, c => c.toUpperCase());
+  return `${storeCode}_${year}_${cleanMonth}.pdf`;
 }
 
 /**
