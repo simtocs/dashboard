@@ -3,28 +3,124 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Progress Perbaikan Toko</title>
-  <!-- Link to your existing CSS file if needed -->
-  <link rel="stylesheet" href="css/style.css">
+  <title>SIMTOCS - Progress Perbaikan Toko</title>
+  <link rel="stylesheet" href="css/index.css">
+  <style>
+    /* Custom page styling */
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #fff;
+      text-decoration: none;
+      background: #4a5568;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    .data-table-container {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      overflow-x: auto;
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    table.data-table th, table.data-table td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    table.data-table th {
+      background-color: #f7fafc;
+      color: #2d3748;
+    }
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+    .status-pending { background: #feebc8; color: #742a2a; }
+    .status-progress { background: #ebf8ff; color: #2b6cb0; }
+    .status-done { background: #c6f6d5; color: #22543d; }
+  </style>
 </head>
 <body>
-  <header>
-    <nav>
-      <ul>
-        <li><a href="index.html">Dashboard</a></li>
-        <li><a href="datakaryawan.html">Data Karyawan</a></li>
-        <li><a href="aktivatoko.html">Aktiva Toko</a></li>
-        <li><a href="checklistbulanan.html">Checklist Bulanan</a></li>
-        <li><a href="listrik2025.html">Listrik 2025</a></li>
-        <li><a href="surkas2025.html">Surkas 2025</a></li>
-        <li><a href="progressperbaikan.html">Progress Perbaikan Toko</a></li>
-      </ul>
-    </nav>
-  </header>
 
-  <main style="padding: 20px;">
-    <h1>Progress Perbaikan Toko</h1>
-    <p>Halaman ini sedang dalam pembuatan.</p>
-  </main>
+  <div class="user-bar">
+    <div class="user-info">
+      <span>👤</span>
+      <span class="user-name" id="displayUsername">Guest</span>
+    </div>
+    <a href="index.html" class="back-btn">⬅️ Kembali ke Dashboard</a>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <h1>🛠️ Progress Perbaikan Toko</h1>
+      <p>Monitoring dan rekapitulasi perbaikan fasilitas Toko Carang Sari</p>
+      <div class="year-badge">📅 Tahun 2026</div>
+    </div>
+
+    <div class="action-bar">
+      <button class="add-btn" onclick="alert('Fitur Tambah Data Perbaikan')">
+        ➕ Tambah Perbaikan Baru
+      </button>
+    </div>
+
+    <div class="data-table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Tanggal</th>
+            <th>Cabang</th>
+            <th>Fasilitas / Item</th>
+            <th>Deskripsi Masalah</th>
+            <th>Estimasi Biaya</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="progressTableBody">
+          <tr>
+            <td>1</td>
+            <td>2026-03-20</td>
+            <td>Carang Sari Utama</td>
+            <td>AC Kasir Utama</td>
+            <td>Bocor air dan kurang dingin</td>
+            <td>Rp 250.000</td>
+            <td><span class="status-badge status-progress">Dalam Proses</span></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>2026-03-15</td>
+            <td>Carang Sari Cabang 2</td>
+            <td>Lampu Display Depan</td>
+            <td>Mati 2 unit</td>
+            <td>Rp 100.000</td>
+            <td><span class="status-badge status-done">Selesai</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>© 2026 SIMTOCS. All rights reserved.</p>
+    <p>Developed with ❤️ by UD Mitra Jaya Solusi for Carang Sari Group.</p>
+  </div>
+
 </body>
 </html>
