@@ -1,0 +1,18 @@
+/* Extra styles for progressperbaikan.html (loaded after surkas2025.css) */
+.section-title { color: #FF69B4; margin: 10px 0 15px; font-size: 1.3em; }
+.stat-card h3 { font-size: 2em; }
+.stat-card.high { background: linear-gradient(135deg, #dc3545 0%, #ff6b6b 100%); }
+.stat-card.medium { background: linear-gradient(135deg, #f0ad4e 0%, #ffc107 100%); }
+.stat-card.low { background: linear-gradient(135deg, #17a2b8 0%, #4A90E2 100%); }
+td.left { text-align: left; }
+td.num { text-align: center; }
+td.desc { min-width: 220px; }
+.badge { display: inline-block; padding: 4px 12px; border-radius: 14px; font-size: 0.85em; font-weight: 600; white-space: nowrap; }
+.b-High { background: #f8d7da; color: #721c24; }
+.b-Medium { background: #fff3cd; color: #856404; }
+.b-Low { background: #d4edda; color: #155724; }
+.b-Attended { background: #d4edda; color: #155724; }
+.b-Unattended { background: #f8d7da; color: #721c24; }
+.b-Hold { background: #fff3cd; color: #856404; }
+.b-Normal { background: #e9ecef; color: #495057; }
+.muted { color: #6c757d; font-style: italic; }
