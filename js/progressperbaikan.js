@@ -5,7 +5,7 @@ const CONFIG = {
     CLIENT_ID: '874016971039-g91m2mt64mid7sh9vkk14vpjmpbc095o.apps.googleusercontent.com',
     API_KEY: 'AIzaSyCMpk-2HdASd6oX-MBRqehgXX-kTfzpFw0',
     SCOPES: 'https://www.googleapis.com/auth/spreadsheets',
-    REPAIR_SPREADSHEET_ID: '',   // paste the ID of a NEW spreadsheet here. Empty = local-only mode
+    REPAIR_SPREADSHEET_ID: '1BhcMXLEsIiw7516dHVG17Fo0jWNa_p8_yk6vMIHt23Q',   // paste the ID of a NEW spreadsheet here. Empty = local-only mode
     REPAIR_TAB: 'Perbaikan'      // tab name. Row 1 = headers, data from row 2, columns A:G
 };
 const STORAGE_KEY = 'simtocs_perbaikan_v1';   // only used in local-only mode
