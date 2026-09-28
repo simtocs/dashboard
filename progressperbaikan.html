@@ -40,7 +40,7 @@
             <div class="select-wrapper">
                 <select id="fStat" onchange="applyFilter()">
                     <option value="">Semua Status</option>
-                    <option>Attended</option><option>Unattended</option><option>Hold</option>
+                    <option>Attended</option><option>Unattended</option><option>Hold</option><option>Resolved</option>
                 </select>
             </div>
             <button class="add-btn" id="addBtn" onclick="openModal()"><span>➕</span><span>Tambah Temuan</span></button>
@@ -63,7 +63,7 @@
                 <div class="form-group"><label for="mUrg">Urgensi *</label>
                     <select id="mUrg" required><option>High</option><option selected>Medium</option><option>Low</option></select></div>
                 <div class="form-group"><label for="mStat">Status *</label>
-                    <select id="mStat" required><option>Attended</option><option>Unattended</option><option>Hold</option></select></div>
+                    <select id="mStat" required><option>Attended</option><option>Unattended</option><option>Hold</option><option>Resolved</option></select></div>
                 <div class="form-group"><label for="mProg">Progres &amp; Tindak Lanjut</label><input type="text" id="mProg" placeholder="Contoh: Penyusunan owner estimate"></div>
                 <div class="form-actions">
                     <button type="submit" class="btn-submit">Simpan</button>
