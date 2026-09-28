@@ -1,10 +1,16 @@
 'use strict';
 
 /* ===== CONFIG ===== */
-const STORAGE_KEY = 'simtocs_perbaikan_v1';   // data lives in this browser only (see notes)
-const SESSION_USER_KEY = 'username';          // adjust to the key your login.js uses
-const IDLE_MS = 10 * 60 * 1000;               // idle time before the warning
-const WARN_SECONDS = 60;
+const CONFIG = {
+    CLIENT_ID: '874016971039-g91m2mt64mid7sh9vkk14vpjmpbc095o.apps.googleusercontent.com',
+    API_KEY: 'AIzaSyCMpk-2HdASd6oX-MBRqehgXX-kTfzpFw0',
+    SCOPES: 'https://www.googleapis.com/auth/spreadsheets',
+    REPAIR_SPREADSHEET_ID: '',   // paste the ID of a NEW spreadsheet here. Empty = local-only mode
+    REPAIR_TAB: 'Perbaikan'      // tab name. Row 1 = headers, data from row 2, columns A:G
+};
+const STORAGE_KEY = 'simtocs_perbaikan_v1';   // only used in local-only mode
+const INACTIVITY_LIMIT = 5 * 60 * 1000;
+const WARNING_TIME = 60 * 1000;
 
 const STORES = [
     ['F4SD', 'Carang Sari 1', 'Gatsu Timur, Denpasar'],
@@ -46,22 +52,69 @@ const SEED = [
 
 /* ===== STATE ===== */
 let items = [];
-let idleTimer, countdownTimer;
+let accessToken = null, tokenClient = null, gapiInited = false;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const storeIdx = k => STORES.findIndex(s => s[0] === k);
 
-function loadItems() {
+const SHEET_ON = () => !!CONFIG.REPAIR_SPREADSHEET_ID;
+const canEdit = () => !SHEET_ON() || !!accessToken;
+const rowToItem = r => ({ id: r[0] || '', kode: r[1] || '', deskripsi: r[2] || '', urgensi: r[3] || 'Medium', status: r[4] || 'Attended', progres: r[5] || '' });
+const itemToRow = i => [i.id, i.kode, i.deskripsi, i.urgensi, i.status, i.progres, new Date().toISOString()];
+
+function localLoad() {
     try {
         const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
         if (Array.isArray(raw)) return raw;
     } catch (e) { /* fall through to seed */ }
     return SEED.map((s, i) => ({ id: 's' + i, kode: s[0], deskripsi: s[1], urgensi: s[2], status: s[3], progres: s[4] }));
 }
-
-function saveItems() {
+function localSave() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
     catch (e) { alert('Data tidak dapat disimpan di browser ini.'); }
+}
+
+async function loadItems() {
+    if (!SHEET_ON()) return localLoad();
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.REPAIR_SPREADSHEET_ID}/values/${encodeURIComponent(CONFIG.REPAIR_TAB)}!A2:G?key=${CONFIG.API_KEY}`;
+    const d = await (await fetch(url)).json();
+    if (d.error) throw new Error(d.error.message);
+    return (d.values || []).filter(r => r[0]).map(rowToItem);
+}
+
+async function refresh() {
+    try { items = await loadItems(); render(); }
+    catch (e) { $('content').innerHTML = '<div class="error"><strong>❌ Gagal Memuat Data</strong>' + esc(e.message) + '<br><br>Pastikan spreadsheet dapat dibaca publik dan nama tab sesuai (' + esc(CONFIG.REPAIR_TAB) + ').</div>'; }
+}
+
+// Writes to Google Sheets (admin + OAuth only). action: add | update | delete
+async function persist(action, item) {
+    if (!accessToken || !gapiInited) throw new Error('Harap otentikasi terlebih dahulu (tombol Otentikasi di kanan atas).');
+    const sp = CONFIG.REPAIR_SPREADSHEET_ID, tab = CONFIG.REPAIR_TAB, sh = gapi.client.sheets.spreadsheets;
+    if (action === 'add') {
+        return sh.values.append({ spreadsheetId: sp, range: `${tab}!A:G`, valueInputOption: 'USER_ENTERED', resource: { values: [itemToRow(item)] } });
+    }
+    const col = await sh.values.get({ spreadsheetId: sp, range: `${tab}!A:A` });
+    const idx = (col.result.values || []).findIndex(v => v[0] === item.id);
+    if (idx < 0) throw new Error('Data tidak ditemukan di sheet. Coba refresh halaman.');
+    const row = idx + 1;
+    if (action === 'update') {
+        return sh.values.update({ spreadsheetId: sp, range: `${tab}!A${row}:G${row}`, valueInputOption: 'USER_ENTERED', resource: { values: [itemToRow(item)] } });
+    }
+    const meta = await sh.get({ spreadsheetId: sp });
+    const sheet = meta.result.sheets.find(s => s.properties.title === tab);
+    if (!sheet) throw new Error('Tab "' + tab + '" tidak ditemukan.');
+    return sh.batchUpdate({ spreadsheetId: sp, resource: { requests: [{ deleteDimension: { range: { sheetId: sheet.properties.sheetId, dimension: 'ROWS', startIndex: row - 1, endIndex: row } } }] } });
+}
+
+async function seedSheet() {
+    if (!confirm('Isi sheet dengan ' + SEED.length + ' data awal dari laporan 26 Sept 2026?')) return;
+    try {
+        const stamp = Date.now();
+        const rows = SEED.map((s, i) => itemToRow({ id: 's' + stamp + i, kode: s[0], deskripsi: s[1], urgensi: s[2], status: s[3], progres: s[4] }));
+        await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: CONFIG.REPAIR_SPREADSHEET_ID, range: `${CONFIG.REPAIR_TAB}!A:G`, valueInputOption: 'USER_ENTERED', resource: { values: rows } });
+        await refresh();
+    } catch (err) { alert('Gagal mengisi data awal: ' + (err.result?.error?.message || err.message)); }
 }
 
 /* ===== DATA VIEW (every number is computed from rows) ===== */
@@ -90,9 +143,11 @@ function getView() {
 
 /* ===== RENDER ===== */
 function render() {
+    $('addBtn').style.display = canEdit() ? '' : 'none';
+    document.body.classList.toggle('no-edit', !canEdit());
     const { rows, normal, sum, perStore } = getView();
     const card = (v, l, c) => `<div class="stat-card ${c || ''}"><h3>${v}</h3><p>${l}</p></div>`;
-    let html = '<div class="stats">' +
+    let html = (SHEET_ON() && accessToken && !items.length ? '<div style="margin-bottom:20px"><button class="add-btn" onclick="seedSheet()">📥 Isi Data Awal (' + SEED.length + ' temuan)</button></div>' : '') + '<div class="stats">' +
         card(sum.toko, 'Total Toko') + card(sum.total, 'Total Temuan') +
         card(sum.high, 'Urgensi High', 'high') + card(sum.medium, 'Urgensi Medium', 'medium') + card(sum.low, 'Urgensi Low', 'low') +
         `<div class="stat-card-finale"><h3>${sum.attended}</h3><p>Attended</p></div>` +
@@ -109,7 +164,7 @@ function render() {
         html += '<div class="empty-state"><div class="empty-state-icon">🔍</div><h2>Tidak ada temuan</h2><p>Ubah filter atau tambah temuan baru.</p></div>';
     } else {
         html += '<div class="table-container"><table><thead><tr><th>Kode</th><th>Nama Toko</th><th>Lokasi</th><th>No.</th>' +
-            '<th>Deskripsi Masalah / Pekerjaan</th><th>Urgensi</th><th>Status</th><th>Progres &amp; Tindak Lanjut</th><th>Aksi</th></tr></thead><tbody>';
+            '<th>Deskripsi Masalah / Pekerjaan</th><th>Urgensi</th><th>Status</th><th>Progres &amp; Tindak Lanjut</th><th class="act">Aksi</th></tr></thead><tbody>';
         const storeCells = k => { const s = STORES[storeIdx(k)]; return `<td class="num">${esc(s[0])}</td><td class="left">${esc(s[1])}</td><td class="left">${esc(s[2])}</td>`; };
         const all = [...rows.map(r => ({ r })), ...normal.map(s => ({ n: s }))]
             .sort((a, b) => storeIdx((a.r || {}).kode || (a.n || [])[0]) - storeIdx((b.r || {}).kode || (b.n || [])[0]));
@@ -119,7 +174,7 @@ function render() {
               `<td class="left">${esc(x.r.progres)}</td><td class="actions"><button class="btn-edit" onclick="openModal('${x.r.id}')">✏️</button>` +
               `<button class="btn-delete" onclick="deleteItem('${x.r.id}')">🗑️</button></td></tr>`
             : `<tr>${storeCells(x.n[0])}<td class="num">-</td><td class="left muted">Belum ada catatan perbaikan (Operasional Normal)</td>` +
-              `<td class="num">-</td><td class="num"><span class="badge b-Normal">Normal</span></td><td class="left muted">Seluruh fasilitas toko terpantau operasional dengan baik</td><td></td></tr>`
+              `<td class="num">-</td><td class="num"><span class="badge b-Normal">Normal</span></td><td class="left muted">Seluruh fasilitas toko terpantau operasional dengan baik</td><td class="actions"></td></tr>`
         ).join('');
         html += '</tbody></table></div>';
     }
@@ -147,19 +202,29 @@ function openModal(id) {
 }
 function closeModal() { $('dataModal').classList.remove('active'); }
 
-function handleSubmit(e) {
+async function handleSubmit(e) {
     e.preventDefault();
     const rec = { kode: $('mStore').value, deskripsi: $('mDesc').value.trim(), urgensi: $('mUrg').value, status: $('mStat').value, progres: $('mProg').value.trim() };
     const id = $('editId').value;
-    if (id) Object.assign(items.find(i => i.id === id), rec);
-    else items.push({ id: 'n' + Date.now(), ...rec });
-    saveItems(); closeModal(); render();
+    try {
+        if (SHEET_ON()) {
+            await persist(id ? 'update' : 'add', { id: id || 'n' + Date.now(), ...rec });
+        } else {
+            if (id) Object.assign(items.find(i => i.id === id), rec); else items.push({ id: 'n' + Date.now(), ...rec });
+            localSave();
+        }
+        closeModal();
+        await refresh();
+    } catch (err) { alert('Gagal menyimpan: ' + (err.result?.error?.message || err.message)); }
 }
 
-function deleteItem(id) {
+async function deleteItem(id) {
     if (!confirm('Hapus temuan ini?')) return;
-    items = items.filter(i => i.id !== id);
-    saveItems(); render();
+    try {
+        if (SHEET_ON()) await persist('delete', { id });
+        else { items = items.filter(i => i.id !== id); localSave(); }
+        await refresh();
+    } catch (err) { alert('Gagal menghapus: ' + (err.result?.error?.message || err.message)); }
 }
 
 /* ===== PDF EXPORT ===== */
@@ -236,32 +301,99 @@ function exportPDF() {
     doc.save(`${now.getDate()}_${bln[now.getMonth()]}_${now.getFullYear()}_Laporan_Maintenance_Toko_Carang_Sari.pdf`);
 }
 
-/* ===== SESSION / AUTO-LOGOUT ===== */
-function logout() { sessionStorage.clear(); window.location.href = 'login.html'; }
-
-function resetInactivityTimer() {
-    clearTimeout(idleTimer); clearInterval(countdownTimer);
-    $('logoutWarning').classList.remove('show');
-    idleTimer = setTimeout(showWarning, IDLE_MS);
+/* ===== AUTH (same cookie session as the other pages) ===== */
+function getCookie(name) {
+    const eq = name + '=';
+    for (const c of document.cookie.split(';')) { const s = c.trim(); if (s.indexOf(eq) === 0) return s.substring(eq.length); }
+    return null;
+}
+function deleteCookie(name) { document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'; }
+function getAuthData() {
+    try { const s = getCookie('userAuth'); return s ? JSON.parse(atob(s)) : null; } catch (e) { return null; }
+}
+function checkAuth() {
+    const a = getAuthData();
+    if (!a) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname); return false; }
+    if (a.expiresAt && new Date() > new Date(a.expiresAt)) {
+        deleteCookie('userAuth');
+        window.location.href = 'login.html?message=' + encodeURIComponent('Session expired');
+        return false;
+    }
+    $('displayUsername').textContent = a.username || 'Guest';
+    $('authBtn').style.display = SHEET_ON() && (a.role || '').toLowerCase() === 'admin' ? 'flex' : 'none';
+    return true;
 }
 
-function showWarning() {
-    let s = WARN_SECONDS;
-    $('warningCountdown').textContent = s;
+function logout(message) {
+    if (!message && !confirm('Yakin ingin logout?')) return;
+    accessToken = null; clearStoredToken(); deleteCookie('userAuth');
+    window.location.href = 'login.html' + (message ? '?message=' + encodeURIComponent(message) : '');
+}
+
+/* ===== GOOGLE OAUTH (same token storage keys as surkas page) ===== */
+function storeToken(t, exp) {
+    try { localStorage.setItem('oauth_token', t); localStorage.setItem('oauth_expiry', String(Date.now() + exp * 1000)); } catch (e) { /* ignore */ }
+}
+function clearStoredToken() {
+    try { localStorage.removeItem('oauth_token'); localStorage.removeItem('oauth_expiry'); } catch (e) { /* ignore */ }
+}
+function restoreToken() {
+    try {
+        const t = localStorage.getItem('oauth_token'), e = parseInt(localStorage.getItem('oauth_expiry'), 10);
+        if (t && e && Date.now() < e - 300000) { accessToken = t; gapi.client.setToken({ access_token: t }); updateAuthButton(); return true; }
+        clearStoredToken();
+    } catch (err) { /* ignore */ }
+    return false;
+}
+function updateAuthButton() {
+    $('authBtn').classList.toggle('authenticated', !!accessToken);
+    $('authBtnText').textContent = accessToken ? '✓ Terotentikasi' : 'Otentikasi';
+}
+function handleAuth() {
+    if (!tokenClient || !gapiInited) { alert('Google API belum siap. Tunggu sebentar lalu coba lagi.'); return; }
+    if (accessToken) { alert('Sudah terotentikasi!'); return; }
+    tokenClient.callback = r => {
+        if (r.error) { alert('Gagal otentikasi: ' + r.error); return; }
+        accessToken = r.access_token;
+        storeToken(accessToken, r.expires_in || 3600);
+        gapi.client.setToken({ access_token: accessToken });
+        updateAuthButton(); render();
+    };
+    tokenClient.requestAccessToken({ prompt: gapi.client.getToken() === null ? 'consent' : '' });
+}
+function initGoogle() {
+    if (!SHEET_ON()) return;
+    if (typeof google !== 'undefined') tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CONFIG.CLIENT_ID, scope: CONFIG.SCOPES, callback: '' });
+    if (typeof gapi !== 'undefined') gapi.load('client', async () => {
+        try {
+            await gapi.client.init({ apiKey: CONFIG.API_KEY, discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'] });
+            gapiInited = true;
+            if (restoreToken()) render();
+        } catch (e) { console.error('GAPI init failed', e); }
+    });
+}
+
+/* ===== AUTO-LOGOUT ===== */
+let inactivityTimer, warningTimer, countdownInterval;
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer); clearTimeout(warningTimer); clearInterval(countdownInterval);
+    $('logoutWarning').classList.remove('show');
+    warningTimer = setTimeout(showLogoutWarning, INACTIVITY_LIMIT - WARNING_TIME);
+    inactivityTimer = setTimeout(() => logout('Anda telah logout otomatis karena tidak ada aktivitas selama 5 menit'), INACTIVITY_LIMIT);
+}
+function showLogoutWarning() {
+    let c = 60;
+    $('warningCountdown').textContent = c;
     $('logoutWarning').classList.add('show');
-    countdownTimer = setInterval(() => {
-        $('warningCountdown').textContent = --s;
-        if (s <= 0) logout();
-    }, 1000);
+    countdownInterval = setInterval(() => { $('warningCountdown').textContent = --c; if (c <= 0) clearInterval(countdownInterval); }, 1000);
 }
 
 /* ===== INIT ===== */
 document.addEventListener('DOMContentLoaded', () => {
-    $('displayUsername').textContent = sessionStorage.getItem(SESSION_USER_KEY) || 'Guest';
-    items = loadItems();
+    if (!checkAuth()) return;
     fillStoreSelects();
-    render();
-    ['click', 'keydown', 'mousemove', 'touchstart'].forEach(ev =>
-        document.addEventListener(ev, () => { if (!$('logoutWarning').classList.contains('show')) resetInactivityTimer(); }, { passive: true }));
+    refresh();
+    ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'].forEach(ev => document.addEventListener(ev, resetInactivityTimer, true));
     resetInactivityTimer();
 });
+window.addEventListener('load', initGoogle);
