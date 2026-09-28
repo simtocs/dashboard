@@ -1,126 +1,79 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIMTOCS - Progress Perbaikan Toko</title>
-  <link rel="stylesheet" href="css/index.css">
-  <style>
-    /* Custom page styling */
-    .action-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .back-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: #fff;
-      text-decoration: none;
-      background: #4a5568;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 600;
-    }
-    .data-table-container {
-      background: #ffffff;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      overflow-x: auto;
-    }
-    table.data-table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-    }
-    table.data-table th, table.data-table td {
-      padding: 12px 15px;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    table.data-table th {
-      background-color: #f7fafc;
-      color: #2d3748;
-    }
-    .status-badge {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: bold;
-    }
-    .status-pending { background: #feebc8; color: #742a2a; }
-    .status-progress { background: #ebf8ff; color: #2b6cb0; }
-    .status-done { background: #c6f6d5; color: #22543d; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIMTOCS - Progress Perbaikan Toko</title>
+    <link rel="stylesheet" href="css/surkas2025.css">
+    <link rel="stylesheet" href="css/progressperbaikan.css">
 </head>
 <body>
-
-  <div class="user-bar">
-    <div class="user-info">
-      <span>👤</span>
-      <span class="user-name" id="displayUsername">Guest</span>
-    </div>
-    <a href="index.html" class="back-btn">⬅️ Kembali ke Dashboard</a>
-  </div>
-
-  <div class="container">
-    <div class="header">
-      <h1>🛠️ Progress Perbaikan Toko</h1>
-      <p>Monitoring dan rekapitulasi perbaikan fasilitas Toko Carang Sari</p>
-      <div class="year-badge">📅 Tahun 2026</div>
+    <div class="logout-warning" id="logoutWarning">
+        <div class="warning-content">
+            <h3>⚠️ Peringatan Inaktivitas</h3>
+            <p>Anda akan logout otomatis dalam <strong><span id="warningCountdown">60</span> detik</strong> karena tidak ada aktivitas.</p>
+            <button onclick="resetInactivityTimer()">Saya Masih Di Sini</button>
+        </div>
     </div>
 
-    <div class="action-bar">
-      <button class="add-btn" onclick="alert('Fitur Tambah Data Perbaikan')">
-        ➕ Tambah Perbaikan Baru
-      </button>
+    <div class="user-bar">
+        <div class="user-info"><span>👤</span><span id="displayUsername">Guest</span></div>
+        <button onclick="logout()" class="logout-btn"><span>🚪</span><span>Logout</span></button>
     </div>
 
-    <div class="data-table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>No</th>
-            <th>Tanggal</th>
-            <th>Cabang</th>
-            <th>Fasilitas / Item</th>
-            <th>Deskripsi Masalah</th>
-            <th>Estimasi Biaya</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="progressTableBody">
-          <tr>
-            <td>1</td>
-            <td>2026-03-20</td>
-            <td>Carang Sari Utama</td>
-            <td>AC Kasir Utama</td>
-            <td>Bocor air dan kurang dingin</td>
-            <td>Rp 250.000</td>
-            <td><span class="status-badge status-progress">Dalam Proses</span></td>
-          </tr>
-          <tr>
-            <td>2</td>
-            <td>2026-03-15</td>
-            <td>Carang Sari Cabang 2</td>
-            <td>Lampu Display Depan</td>
-            <td>Mati 2 unit</td>
-            <td>Rp 100.000</td>
-            <td><span class="status-badge status-done">Selesai</span></td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="container">
+        <div class="header">
+            <h1>🛠️ SIMTOCS - Progress Perbaikan Toko</h1>
+            <p>Monitoring dan Rekapitulasi Pemeliharaan Fasilitas Toko Carang Sari</p>
+        </div>
+
+        <div class="controls">
+            <a href="index.html" class="back-btn"><span>🏠</span><span>Kembali ke Dashboard</span></a>
+            <div class="select-wrapper"><select id="fStore" onchange="applyFilter()"></select></div>
+            <div class="select-wrapper">
+                <select id="fUrg" onchange="applyFilter()">
+                    <option value="">Semua Urgensi</option>
+                    <option>High</option><option>Medium</option><option>Low</option>
+                </select>
+            </div>
+            <div class="select-wrapper">
+                <select id="fStat" onchange="applyFilter()">
+                    <option value="">Semua Status</option>
+                    <option>Attended</option><option>Unattended</option><option>Hold</option>
+                </select>
+            </div>
+            <button class="add-btn" onclick="openModal()"><span>➕</span><span>Tambah Temuan</span></button>
+            <button class="compare-btn" id="pdfBtn" onclick="exportPDF()"><span>📄</span><span>Unduh PDF</span></button>
+        </div>
+
+        <div class="content" id="content"></div>
     </div>
-  </div>
 
-  <div class="footer">
-    <p>© 2026 SIMTOCS. All rights reserved.</p>
-    <p>Developed with ❤️ by UD Mitra Jaya Solusi for Carang Sari Group.</p>
-  </div>
+    <div id="dataModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Tambah Temuan</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="dataForm" onsubmit="handleSubmit(event)">
+                <input type="hidden" id="editId">
+                <div class="form-group"><label for="mStore">Toko *</label><select id="mStore" required></select></div>
+                <div class="form-group"><label for="mDesc">Deskripsi Masalah / Pekerjaan *</label><input type="text" id="mDesc" required placeholder="Contoh: Lampu chiller mati 3 pcs"></div>
+                <div class="form-group"><label for="mUrg">Urgensi *</label>
+                    <select id="mUrg" required><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+                <div class="form-group"><label for="mStat">Status *</label>
+                    <select id="mStat" required><option>Attended</option><option>Unattended</option><option>Hold</option></select></div>
+                <div class="form-group"><label for="mProg">Progres &amp; Tindak Lanjut</label><input type="text" id="mProg" placeholder="Contoh: Penyusunan owner estimate"></div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">Simpan</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="js/progressperbaikan.js"></script>
 </body>
 </html>
