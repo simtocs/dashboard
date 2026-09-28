@@ -16,3 +16,6 @@ td.desc { min-width: 220px; }
 .b-Hold { background: #fff3cd; color: #856404; }
 .b-Normal { background: #e9ecef; color: #495057; }
 .muted { color: #6c757d; font-style: italic; }
+
+/* read-only view: hide edit/delete column */
+.no-edit .actions, .no-edit th.act { display: none; }
