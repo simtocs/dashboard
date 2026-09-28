@@ -132,7 +132,8 @@ function getView() {
     const sum = {
         toko: stores.length, total: rows.length,
         high: n('urgensi', 'High'), medium: n('urgensi', 'Medium'), low: n('urgensi', 'Low'),
-        attended: n('status', 'Attended'), unattended: rows.length - n('status', 'Attended')
+        attended: n('status', 'Attended'), resolved: n('status', 'Resolved'),
+        unattended: n('status', 'Unattended') + n('status', 'Hold')
     };
     const perStore = stores.map(s => {
         const r = rows.filter(x => x.kode === s[0]);
@@ -151,6 +152,7 @@ function render() {
         card(sum.toko, 'Total Toko') + card(sum.total, 'Total Temuan') +
         card(sum.high, 'Urgensi High', 'high') + card(sum.medium, 'Urgensi Medium', 'medium') + card(sum.low, 'Urgensi Low', 'low') +
         `<div class="stat-card-finale"><h3>${sum.attended}</h3><p>Attended</p></div>` +
+        `<div class="stat-card-finale"><h3>${sum.resolved}</h3><p>Resolved</p></div>` +
         card(sum.unattended, 'Unattended / Hold', 'high') + '</div>';
 
     html += '<h2 class="section-title">Ringkasan Status per Toko</h2><div class="table-container"><table><thead><tr>' +
@@ -246,12 +248,12 @@ function exportPDF() {
     doc.text('Ringkasan Eksekutif Pemeliharaan Toko  |  Per ' + tgl, 10, 18);
 
     const kpis = [['TOTAL TOKO', sum.toko], ['TOTAL TEMUAN', sum.total], ['URGENSI HIGH', sum.high], ['URGENSI MEDIUM', sum.medium],
-        ['URGENSI LOW', sum.low], ['ATTENDED', sum.attended], ['UNATTENDED / HOLD', sum.unattended]];
+        ['URGENSI LOW', sum.low], ['ATTENDED', sum.attended], ['RESOLVED', sum.resolved], ['UNATTENDED / HOLD', sum.unattended]];
     kpis.forEach((k, i) => {
-        const x = 10 + i * 40;
-        doc.setFillColor(248, 249, 250); doc.setDrawColor(...BLUE); doc.roundedRect(x, 30, 37, 20, 2, 2, 'FD');
-        doc.setTextColor(...PINK); doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text(String(k[1]), x + 18.5, 40, { align: 'center' });
-        doc.setTextColor(73, 80, 87); doc.setFontSize(7); doc.text(k[0], x + 18.5, 46, { align: 'center' });
+        const x = 10 + i * 35;
+        doc.setFillColor(248, 249, 250); doc.setDrawColor(...BLUE); doc.roundedRect(x, 30, 32, 20, 2, 2, 'FD');
+        doc.setTextColor(...PINK); doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text(String(k[1]), x + 16, 40, { align: 'center' });
+        doc.setTextColor(73, 80, 87); doc.setFontSize(7); doc.text(k[0], x + 16, 46, { align: 'center' });
     });
 
     doc.setTextColor(40); doc.setFontSize(11); doc.text('RINGKASAN STATUS PER TOKO', 10, 58);
@@ -276,7 +278,7 @@ function exportPDF() {
     ].sort((a, b) => a[0] - b[0] || (Number(a[4]) || 0) - (Number(b[4]) || 0));
 
     const tone = { High: [[248, 215, 218], [114, 28, 36]], Medium: [[255, 243, 205], [133, 100, 4]], Low: [[212, 237, 218], [21, 87, 36]],
-        Attended: [[212, 237, 218], [21, 87, 36]], Unattended: [[248, 215, 218], [114, 28, 36]], Hold: [[255, 243, 205], [133, 100, 4]], Normal: [[233, 236, 239], [73, 80, 87]] };
+        Attended: [[212, 237, 218], [21, 87, 36]], Unattended: [[248, 215, 218], [114, 28, 36]], Hold: [[255, 243, 205], [133, 100, 4]], Resolved: [[204, 229, 255], [0, 64, 133]], Normal: [[233, 236, 239], [73, 80, 87]] };
     doc.autoTable({
         startY: 25, theme: 'grid', styles: { fontSize: 8, cellPadding: 1.8, valign: 'middle' },
         headStyles: { fillColor: BLUE, halign: 'center' },
