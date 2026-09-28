@@ -18,6 +18,7 @@
 
     <div class="user-bar">
         <div class="user-info"><span>👤</span><span id="displayUsername">Guest</span></div>
+        <button id="authBtn" onclick="handleAuth()" class="auth-btn" style="display:none"><span>🔐</span><span id="authBtnText">Otentikasi</span></button>
         <button onclick="logout()" class="logout-btn"><span>🚪</span><span>Logout</span></button>
     </div>
 
@@ -42,7 +43,7 @@
                     <option>Attended</option><option>Unattended</option><option>Hold</option>
                 </select>
             </div>
-            <button class="add-btn" onclick="openModal()"><span>➕</span><span>Tambah Temuan</span></button>
+            <button class="add-btn" id="addBtn" onclick="openModal()"><span>➕</span><span>Tambah Temuan</span></button>
             <button class="compare-btn" id="pdfBtn" onclick="exportPDF()"><span>📄</span><span>Unduh PDF</span></button>
         </div>
 
@@ -72,6 +73,8 @@
         </div>
     </div>
 
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="js/progressperbaikan.js"></script>
