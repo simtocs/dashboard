@@ -14,6 +14,7 @@ td.desc { min-width: 220px; }
 .b-Attended { background: #d4edda; color: #155724; }
 .b-Unattended { background: #f8d7da; color: #721c24; }
 .b-Hold { background: #fff3cd; color: #856404; }
+.b-Resolved { background: #cce5ff; color: #004085; }
 .b-Normal { background: #e9ecef; color: #495057; }
 .muted { color: #6c757d; font-style: italic; }
 
